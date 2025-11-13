@@ -1,0 +1,33 @@
+# FastAPI and related dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# CORS middleware
+python-multipart==0.0.6
+
+# Database (uncomment as needed)
+# sqlalchemy==2.0.25
+# psycopg2-binary==2.9.9  # PostgreSQL
+# pymysql==1.1.0  # MySQL
+# databases==0.8.0  # Async database support
+
+# Authentication (uncomment as needed)
+# python-jose[cryptography]==3.3.0
+# passlib[bcrypt]==1.7.4
+
+# HTTP client
+# httpx==0.26.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Optimization
+pulp==2.7.0
+
+# Development dependencies
+# pytest==7.4.4
+# pytest-asyncio==0.23.3
+# black==24.1.1
+# flake8==7.0.0
