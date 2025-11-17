@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="../src/styles/main.css">
 </head>
 <body>
-    <div class="container">
+    <div class="app-container">
+        <!-- Header -->
         <header>
             <div class="header-content">
                 <div class="denso-logo">
@@ -17,181 +18,238 @@
             </div>
         </header>
 
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="products">Products</button>
-            <button class="tab-btn" data-tab="plants">Plants</button>
-            <button class="tab-btn" data-tab="transfer-plan">Generate Transfer Plan</button>
-            <button class="tab-btn" data-tab="results">Results</button>
-        </nav>
-
-        <main>
-            <!-- Products Tab -->
-            <section id="products-tab" class="tab-content active">
-                <h2>Product Management</h2>
-                <p class="section-description">Manage products (SKUs) with their demand and cost information.</p>
-
-                <div class="card" style="background: #f0f9f4; border-left-color: #10A958;">
-                    <h3>Quick Start - Example Data</h3>
-                    <p style="margin-bottom: 15px; color: #666;">Load realistic automotive manufacturing example data to test the optimization system.</p>
-                    <button id="loadExampleData" class="btn-secondary" style="background: #10A958; color: white;">
-                        Load Example Data (12 Products, 4 Plants)
-                    </button>
-                    <div id="exampleDataStatus" style="margin-top: 15px;"></div>
+        <!-- Main Layout: Sidebar + Content -->
+        <div class="main-layout">
+            <!-- Left Sidebar for Sessions -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h3>Sessions</h3>
+                    <button class="btn-icon" id="newSessionBtn" title="New Session">+</button>
                 </div>
-
-                <div class="card">
-                    <h3>Products List</h3>
-                    <button id="loadProducts" class="btn-secondary">Refresh Products</button>
-                    <div id="productsList" class="data-table"></div>
-                </div>
-
-                <div class="card">
-                    <h3>Add New Product</h3>
-                    <form id="addProductForm" class="form-grid">
-                        <div class="form-group">
-                            <label for="productId">Product ID (SKU) *</label>
-                            <input type="text" id="productId" placeholder="e.g., SKU-001" required>
+                <div class="sessions-list" id="sessionsList">
+                    <div class="session-item active" data-session="default">
+                        <div class="session-info">
+                            <div class="session-name">Default Session</div>
+                            <div class="session-date">Active</div>
                         </div>
-                        <div class="form-group">
-                            <label for="currentPlantId">Current Plant ID *</label>
-                            <input type="text" id="currentPlantId" placeholder="e.g., PLANT-JP-01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="monthlyDemand">Monthly Demand (pcs) *</label>
-                            <input type="number" id="monthlyDemand" placeholder="e.g., 10000" step="1" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="currentUnitCost">Current Unit Cost ($) *</label>
-                            <input type="number" id="currentUnitCost" placeholder="e.g., 25.50" step="0.01" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="unitVolume">Unit Volume/Weight</label>
-                            <input type="number" id="unitVolume" placeholder="Optional" step="0.01" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="cycleTime">Cycle Time (sec)</label>
-                            <input type="number" id="cycleTime" placeholder="Optional" step="0.1" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="yieldRate">Yield Rate (%)</label>
-                            <input type="number" id="yieldRate" placeholder="Optional" step="0.1" min="0" max="100">
-                        </div>
-                        <div class="form-group full-width">
-                            <button type="submit" class="btn-primary">Add Product</button>
-                        </div>
-                    </form>
-                </div>
-            </section>
-
-            <!-- Plants Tab -->
-            <section id="plants-tab" class="tab-content">
-                <h2>Plant Management</h2>
-                <p class="section-description">Manage candidate target plants with capacity and cost information.</p>
-
-                <div class="card">
-                    <h3>Plants List</h3>
-                    <button id="loadPlants" class="btn-secondary">Refresh Plants</button>
-                    <div id="plantsList" class="data-table"></div>
-                </div>
-
-                <div class="card">
-                    <h3>Add New Plant</h3>
-                    <form id="addPlantForm" class="form-grid">
-                        <div class="form-group">
-                            <label for="plantId">Plant ID *</label>
-                            <input type="text" id="plantId" placeholder="e.g., PLANT-JP-01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="availableCapacity">Available Capacity (pcs/month) *</label>
-                            <input type="number" id="availableCapacity" placeholder="e.g., 50000" step="1" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="unitProductionCost">Unit Production Cost ($) *</label>
-                            <input type="number" id="unitProductionCost" placeholder="e.g., 22.00" step="0.01" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="transferFixedCost">Transfer Fixed Cost ($) *</label>
-                            <input type="number" id="transferFixedCost" placeholder="e.g., 50000" step="0.01" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="effectiveOEE">Effective OEE (0-1)</label>
-                            <input type="number" id="effectiveOEE" placeholder="e.g., 0.85" step="0.01" min="0" max="1" value="1.0">
-                        </div>
-                        <div class="form-group">
-                            <label for="leadTimeToStart">Lead Time to Start (months)</label>
-                            <input type="number" id="leadTimeToStart" placeholder="e.g., 3" step="0.1" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="riskScore">Risk Score (0-1)</label>
-                            <input type="number" id="riskScore" placeholder="Optional" step="0.01" min="0" max="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="maxUtilization">Max Utilization Target (%)</label>
-                            <input type="number" id="maxUtilization" placeholder="e.g., 90" step="1" min="0" max="100" value="90">
-                        </div>
-                        <div class="form-group full-width">
-                            <button type="submit" class="btn-primary">Add Plant</button>
-                        </div>
-                    </form>
-                </div>
-            </section>
-
-            <!-- Transfer Plan Tab -->
-            <section id="transfer-plan-tab" class="tab-content">
-                <h2>Generate Transfer Plan</h2>
-                <p class="section-description">Configure optimization parameters and generate transfer plan recommendations.</p>
-
-                <div class="card">
-                    <h3>Optimization Configuration</h3>
-                    <form id="generatePlanForm" class="form-grid">
-                        <div class="form-group">
-                            <label for="budgetCapital">Budget Capital ($)</label>
-                            <input type="number" id="budgetCapital" placeholder="Optional - leave blank for no limit" step="0.01" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="transferDeadline">Transfer Deadline</label>
-                            <input type="date" id="transferDeadline" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label for="discountRate">Discount Rate (0-1)</label>
-                            <input type="number" id="discountRate" placeholder="Optional" step="0.01" min="0" max="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="objectiveFunction">Objective Function</label>
-                            <select id="objectiveFunction">
-                                <option value="minimize_cost">Minimize Total Cost</option>
-                                <option value="minimize_time">Minimize Time-to-Production</option>
-                                <option value="balance_utilization">Balance Utilization</option>
-                                <option value="multi_objective">Multi-Objective</option>
-                            </select>
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="allowFractional">
-                                Allow fractional assignment (split production across plants)
-                            </label>
-                        </div>
-                        <div class="form-group full-width">
-                            <button type="submit" class="btn-primary btn-large">Generate Transfer Plan</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div id="planGenerationStatus" class="status-message"></div>
-            </section>
-
-            <!-- Results Tab -->
-            <section id="results-tab" class="tab-content">
-                <h2>Transfer Plan Results</h2>
-                <p class="section-description">View the optimized transfer plan recommendations.</p>
-
-                <div id="resultsContainer">
-                    <div class="empty-state">
-                        <p>No transfer plan generated yet. Go to "Generate Transfer Plan" tab to create one.</p>
                     </div>
                 </div>
-            </section>
-        </main>
+
+                <div class="sidebar-footer">
+                    <div class="session-stats" id="sessionStats">
+                        <div class="stat-item">
+                            <span class="stat-label">Products:</span>
+                            <span class="stat-value" id="productCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Plants:</span>
+                            <span class="stat-value" id="plantCount">0</span>
+                        </div>
+                    </div>
+                    <div class="quick-actions">
+                        <h4>Quick Actions</h4>
+                        <button id="loadExampleDataSidebar" class="sidebar-btn">
+                            Load Example Data
+                        </button>
+                        <button id="clearDataBtn" class="sidebar-btn btn-danger">
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div class="content-wrapper">
+                <nav class="tabs">
+                    <button class="tab-btn active" data-tab="data-management">
+                        Data Management
+                    </button>
+                    <button class="tab-btn" data-tab="transfer-plan">
+                        Generate Plan
+                    </button>
+                    <button class="tab-btn" data-tab="results">
+                        Results
+                    </button>
+                </nav>
+
+                <main>
+                    <!-- Data Management Tab (Combined Products + Plants) -->
+                    <section id="data-management-tab" class="tab-content active">
+                        <div class="page-header">
+                            <h2>Data Management</h2>
+                            <p class="section-description">Manage products and plants for transfer plan optimization</p>
+                        </div>
+
+                        <!-- Sub-tabs for Products and Plants -->
+                        <div class="sub-tabs">
+                            <button class="sub-tab-btn active" data-subtab="products">Products</button>
+                            <button class="sub-tab-btn" data-subtab="plants">Plants</button>
+                        </div>
+
+                        <!-- Products Section -->
+                        <div id="products-section" class="sub-tab-content active">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Products List</h3>
+                                    <button id="loadProducts" class="btn-secondary">Refresh</button>
+                                </div>
+                                <div id="productsList" class="data-table"></div>
+                            </div>
+
+                            <div class="card">
+                                <h3>Add New Product</h3>
+                                <form id="addProductForm" class="form-grid">
+                                    <div class="form-group">
+                                        <label for="productId">Product ID (SKU) *</label>
+                                        <input type="text" id="productId" placeholder="e.g., SKU-001" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="currentPlantId">Current Plant ID *</label>
+                                        <input type="text" id="currentPlantId" placeholder="e.g., PLANT-JP-01" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="monthlyDemand">Monthly Demand (pcs) *</label>
+                                        <input type="number" id="monthlyDemand" placeholder="e.g., 10000" step="1" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="currentUnitCost">Current Unit Cost ($) *</label>
+                                        <input type="number" id="currentUnitCost" placeholder="e.g., 25.50" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="unitVolume">Unit Volume/Weight</label>
+                                        <input type="number" id="unitVolume" placeholder="Optional" step="0.01" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cycleTime">Cycle Time (sec)</label>
+                                        <input type="number" id="cycleTime" placeholder="Optional" step="0.1" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="yieldRate">Yield Rate (%)</label>
+                                        <input type="number" id="yieldRate" placeholder="Optional" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <button type="submit" class="btn-primary">Add Product</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Plants Section -->
+                        <div id="plants-section" class="sub-tab-content">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Plants List</h3>
+                                    <button id="loadPlants" class="btn-secondary">Refresh</button>
+                                </div>
+                                <div id="plantsList" class="data-table"></div>
+                            </div>
+
+                            <div class="card">
+                                <h3>Add New Plant</h3>
+                                <form id="addPlantForm" class="form-grid">
+                                    <div class="form-group">
+                                        <label for="plantId">Plant ID *</label>
+                                        <input type="text" id="plantId" placeholder="e.g., PLANT-JP-01" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="availableCapacity">Available Capacity (pcs/month) *</label>
+                                        <input type="number" id="availableCapacity" placeholder="e.g., 50000" step="1" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="unitProductionCost">Unit Production Cost ($) *</label>
+                                        <input type="number" id="unitProductionCost" placeholder="e.g., 22.00" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transferFixedCost">Transfer Fixed Cost ($) *</label>
+                                        <input type="number" id="transferFixedCost" placeholder="e.g., 50000" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="effectiveOEE">Effective OEE (0-1)</label>
+                                        <input type="number" id="effectiveOEE" placeholder="e.g., 0.85" step="0.01" min="0" max="1" value="1.0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="leadTimeToStart">Lead Time to Start (months)</label>
+                                        <input type="number" id="leadTimeToStart" placeholder="e.g., 3" step="0.1" min="0" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="riskScore">Risk Score (0-1)</label>
+                                        <input type="number" id="riskScore" placeholder="Optional" step="0.01" min="0" max="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="maxUtilization">Max Utilization Target (%)</label>
+                                        <input type="number" id="maxUtilization" placeholder="e.g., 90" step="1" min="0" max="100" value="90">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <button type="submit" class="btn-primary">Add Plant</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Transfer Plan Tab -->
+                    <section id="transfer-plan-tab" class="tab-content">
+                        <div class="page-header">
+                            <h2>Generate Transfer Plan</h2>
+                            <p class="section-description">Configure optimization parameters and generate transfer plan recommendations</p>
+                        </div>
+
+                        <div class="card highlighted-card">
+                            <h3>Optimization Configuration</h3>
+                            <form id="generatePlanForm" class="form-grid">
+                                <div class="form-group">
+                                    <label for="budgetCapital">Budget Capital ($)</label>
+                                    <input type="number" id="budgetCapital" placeholder="Optional - leave blank for no limit" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="transferDeadline">Transfer Deadline</label>
+                                    <input type="date" id="transferDeadline" placeholder="Optional">
+                                </div>
+                                <div class="form-group">
+                                    <label for="discountRate">Discount Rate (0-1)</label>
+                                    <input type="number" id="discountRate" placeholder="Optional" step="0.01" min="0" max="1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="objectiveFunction">Objective Function</label>
+                                    <select id="objectiveFunction">
+                                        <option value="minimize_cost">Minimize Total Cost</option>
+                                        <option value="minimize_time">Minimize Time-to-Production</option>
+                                        <option value="balance_utilization">Balance Utilization</option>
+                                        <option value="multi_objective">Multi-Objective</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="allowFractional">
+                                        Allow fractional assignment (split production across plants)
+                                    </label>
+                                </div>
+                                <div class="form-group full-width">
+                                    <button type="submit" class="btn-primary btn-large">Generate Transfer Plan</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div id="planGenerationStatus" class="status-message"></div>
+                    </section>
+
+                    <!-- Results Tab -->
+                    <section id="results-tab" class="tab-content">
+                        <div class="page-header">
+                            <h2>Transfer Plan Results</h2>
+                            <p class="section-description">View the optimized transfer plan recommendations</p>
+                        </div>
+
+                        <div id="resultsContainer">
+                            <div class="empty-state">
+                                <p>No transfer plan generated yet</p>
+                                <p class="empty-state-hint">Go to "Generate Plan" to create an optimized transfer plan</p>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
 
         <footer>
             <p>&copy; 2025 DENSO Corporation. All rights reserved.</p>

@@ -4,7 +4,7 @@ const API_BASE_URL = 'http://localhost:8000/api/v1';
 // Global variable to store last transfer plan result
 let lastTransferPlanResult = null;
 
-// ==================== TAB NAVIGATION ====================
+// ==================== MAIN TAB NAVIGATION ====================
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const tabName = btn.dataset.tab;
@@ -17,6 +17,277 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById(`${tabName}-tab`).classList.add('active');
     });
+});
+
+// ==================== SUB-TAB NAVIGATION (Products/Plants) ====================
+document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const subtabName = btn.dataset.subtab;
+
+        // Update active sub-tab button
+        document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update active sub-tab content
+        document.querySelectorAll('.sub-tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${subtabName}-section`).classList.add('active');
+    });
+});
+
+// ==================== SESSION MANAGEMENT ====================
+
+// Function to clear all data from backend
+async function clearAllData() {
+    try {
+        // Get all products and delete them
+        const productsResponse = await fetch(`${API_BASE_URL}/products`);
+        const products = await productsResponse.json();
+        for (const product of products) {
+            await fetch(`${API_BASE_URL}/products/${product.id}`, { method: 'DELETE' });
+        }
+
+        // Get all plants and delete them
+        const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+        const plants = await plantsResponse.json();
+        for (const plant of plants) {
+            await fetch(`${API_BASE_URL}/plants/${plant.id}`, { method: 'DELETE' });
+        }
+
+        // Clear last transfer plan result
+        lastTransferPlanResult = null;
+
+        // Reload UI
+        await loadProducts();
+        await loadPlants();
+
+        // Clear results display
+        const resultsContainer = document.getElementById('resultsContainer');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = `
+                <div class="empty-state">
+                    <p>No transfer plan generated yet</p>
+                    <p class="empty-state-hint">Go to "Generate Plan" to create an optimized transfer plan</p>
+                </div>
+            `;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error clearing data:', error);
+        alert(`Error clearing data: ${error.message}`);
+        return false;
+    }
+}
+
+// New session button
+document.getElementById('newSessionBtn')?.addEventListener('click', async () => {
+    // Check if there's existing data
+    const productsResponse = await fetch(`${API_BASE_URL}/products`);
+    const products = await productsResponse.json();
+    const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+    const plants = await plantsResponse.json();
+
+    let confirmClear = true;
+    if (products.length > 0 || plants.length > 0) {
+        confirmClear = confirm(
+            `Creating a new session will clear all existing data:\n` +
+            `- ${products.length} product(s)\n` +
+            `- ${plants.length} plant(s)\n\n` +
+            `Are you sure you want to continue?`
+        );
+    }
+
+    if (!confirmClear) return;
+
+    const sessionName = prompt('Enter session name:');
+    if (sessionName) {
+        // Show loading
+        const btn = document.getElementById('newSessionBtn');
+        const originalText = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
+
+        // Clear all data
+        const cleared = await clearAllData();
+
+        if (cleared) {
+            const sessionsList = document.getElementById('sessionsList');
+            const newSession = document.createElement('div');
+            newSession.className = 'session-item';
+            newSession.innerHTML = `
+                <div class="session-info">
+                    <div class="session-name">${sessionName}</div>
+                    <div class="session-date">${new Date().toLocaleDateString()}</div>
+                </div>
+            `;
+
+            // Remove active from all sessions
+            document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+            newSession.classList.add('active');
+
+            sessionsList.appendChild(newSession);
+
+            // Add click handler for switching sessions (with warning)
+            newSession.addEventListener('click', async () => {
+                const currentActive = document.querySelector('.session-item.active');
+                if (currentActive !== newSession) {
+                    // Check if there's data before switching
+                    const productsResp = await fetch(`${API_BASE_URL}/products`);
+                    const prods = await productsResp.json();
+                    const plantsResp = await fetch(`${API_BASE_URL}/plants`);
+                    const plts = await plantsResp.json();
+
+                    let confirmSwitch = true;
+                    if (prods.length > 0 || plts.length > 0) {
+                        confirmSwitch = confirm(
+                            `Switching sessions will clear current data:\n` +
+                            `- ${prods.length} product(s)\n` +
+                            `- ${plts.length} plant(s)\n\n` +
+                            `Continue?`
+                        );
+                    }
+
+                    if (confirmSwitch) {
+                        await clearAllData();
+                        document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+                        newSession.classList.add('active');
+                    }
+                }
+            });
+
+            // Show success message
+            alert(`New session "${sessionName}" created successfully!\nAll data has been cleared.`);
+        }
+
+        // Reset button
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+});
+
+// Session switching for existing sessions
+document.querySelectorAll('.session-item').forEach(session => {
+    session.addEventListener('click', async () => {
+        const currentActive = document.querySelector('.session-item.active');
+        if (currentActive !== session) {
+            // Check if there's data before switching
+            const productsResponse = await fetch(`${API_BASE_URL}/products`);
+            const products = await productsResponse.json();
+            const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+            const plants = await plantsResponse.json();
+
+            let confirmSwitch = true;
+            if (products.length > 0 || plants.length > 0) {
+                confirmSwitch = confirm(
+                    `Switching sessions will clear current data:\n` +
+                    `- ${products.length} product(s)\n` +
+                    `- ${plants.length} plant(s)\n\n` +
+                    `Continue?`
+                );
+            }
+
+            if (confirmSwitch) {
+                await clearAllData();
+                document.querySelectorAll('.session-item').forEach(s => s.classList.remove('active'));
+                session.classList.add('active');
+            }
+        }
+    });
+});
+
+// ==================== SESSION STATS UPDATE ====================
+async function updateSessionStats() {
+    try {
+        const productsResponse = await fetch(`${API_BASE_URL}/products`);
+        const products = await productsResponse.json();
+        const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+        const plants = await plantsResponse.json();
+
+        const productCountEl = document.getElementById('productCount');
+        const plantCountEl = document.getElementById('plantCount');
+
+        if (productCountEl) productCountEl.textContent = products.length;
+        if (plantCountEl) plantCountEl.textContent = plants.length;
+    } catch (error) {
+        console.error('Error updating session stats:', error);
+    }
+}
+
+// ==================== SIDEBAR QUICK ACTIONS ====================
+// Load Example Data from sidebar
+document.getElementById('loadExampleDataSidebar')?.addEventListener('click', async () => {
+    // Switch to Data Management tab
+    document.querySelector('[data-tab="data-management"]').click();
+
+    // Show loading state
+    const btn = document.getElementById('loadExampleDataSidebar');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Loading...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/transfer-plan/load-example-data`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+
+            // Show success notification
+            alert(`Example data loaded successfully!\nProducts: ${result.products_added} | Plants: ${result.plants_added}`);
+
+            // Reload the products and plants lists
+            await loadProducts();
+            await loadPlants();
+            await updateSessionStats();
+        } else {
+            const error = await response.json();
+            alert(`Error: ${error.detail}`);
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+// Clear Data button
+document.getElementById('clearDataBtn')?.addEventListener('click', async () => {
+    // Check if there's data to clear
+    const productsResponse = await fetch(`${API_BASE_URL}/products`);
+    const products = await productsResponse.json();
+    const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+    const plants = await plantsResponse.json();
+
+    if (products.length === 0 && plants.length === 0) {
+        alert('No data to clear.');
+        return;
+    }
+
+    const confirmClear = confirm(
+        `Are you sure you want to clear all data?\n\n` +
+        `- ${products.length} product(s)\n` +
+        `- ${plants.length} plant(s)\n\n` +
+        `This action cannot be undone.`
+    );
+
+    if (confirmClear) {
+        const btn = document.getElementById('clearDataBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Clearing...';
+        btn.disabled = true;
+
+        const cleared = await clearAllData();
+
+        if (cleared) {
+            await updateSessionStats();
+            alert('All data has been cleared successfully!');
+        }
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 });
 
 // ==================== PRODUCT MANAGEMENT ====================
@@ -64,6 +335,9 @@ async function loadProducts() {
                 </table>
             `;
         }
+
+        // Update session stats
+        await updateSessionStats();
     } catch (error) {
         document.getElementById('productsList').innerHTML = `
             <p class="error">Error loading products: ${error.message}</p>
@@ -176,6 +450,9 @@ async function loadPlants() {
                 </table>
             `;
         }
+
+        // Update session stats
+        await updateSessionStats();
     } catch (error) {
         document.getElementById('plantsList').innerHTML = `
             <p class="error">Error loading plants: ${error.message}</p>
@@ -246,39 +523,6 @@ async function deletePlant(plantId) {
     }
 }
 
-// ==================== EXAMPLE DATA ====================
-
-document.getElementById('loadExampleData').addEventListener('click', async () => {
-    const statusDiv = document.getElementById('exampleDataStatus');
-    statusDiv.innerHTML = '<p class="info">Loading example data...</p>';
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/transfer-plan/load-example-data`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            statusDiv.innerHTML = `
-                <div class="success">
-                    <p><strong>${result.message}</strong></p>
-                    <p>Products: ${result.products_added} | Plants: ${result.plants_added}</p>
-                    <p>Total Demand: ${result.total_monthly_demand.toLocaleString()} pcs/month</p>
-                    <p>Total Capacity: ${Math.round(result.total_available_capacity).toLocaleString()} pcs/month</p>
-                </div>
-            `;
-
-            // Reload the products and plants lists
-            await loadProducts();
-            await loadPlants();
-        } else {
-            const error = await response.json();
-            statusDiv.innerHTML = `<p class="error">Error: ${error.detail}</p>`;
-        }
-    } catch (error) {
-        statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
-    }
-});
 
 // ==================== TRANSFER PLAN GENERATION ====================
 
@@ -446,4 +690,5 @@ function displayResults(result) {
 document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
     loadPlants();
+    updateSessionStats();
 });
