@@ -4,19 +4,59 @@ const API_BASE_URL = 'http://localhost:8000/api/v1';
 // Global variable to store last transfer plan result
 let lastTransferPlanResult = null;
 
-// ==================== MAIN TAB NAVIGATION ====================
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tabName = btn.dataset.tab;
+// ==================== STEPPER NAVIGATION ====================
+let currentStep = 1;
 
-        // Update active tab button
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+function goToStep(stepNumber) {
+    // Hide all content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-        // Update active tab content
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        document.getElementById(`${tabName}-tab`).classList.add('active');
+    // Show target content
+    const stepMap = {
+        1: 'data-management-tab',
+        2: 'transfer-plan-tab',
+        3: 'results-tab'
+    };
+
+    document.getElementById(stepMap[stepNumber]).classList.add('active');
+
+    // Update stepper UI
+    document.querySelectorAll('.step').forEach(step => {
+        const stepNum = parseInt(step.dataset.step);
+        step.classList.remove('active', 'completed');
+
+        if (stepNum === stepNumber) {
+            step.classList.add('active');
+        } else if (stepNum < stepNumber) {
+            step.classList.add('completed');
+        }
     });
+
+    currentStep = stepNumber;
+
+    // Scroll to top
+    document.querySelector('main').scrollTop = 0;
+}
+
+// Step navigation buttons
+document.getElementById('nextStep1')?.addEventListener('click', () => {
+    goToStep(2);
+});
+
+document.getElementById('prevStep2')?.addEventListener('click', () => {
+    goToStep(1);
+});
+
+document.getElementById('nextStep2')?.addEventListener('click', () => {
+    goToStep(3);
+});
+
+document.getElementById('prevStep3')?.addEventListener('click', () => {
+    goToStep(2);
+});
+
+document.getElementById('startOver')?.addEventListener('click', () => {
+    goToStep(1);
 });
 
 // ==================== SUB-TAB NAVIGATION (Products/Plants) ====================
@@ -213,42 +253,223 @@ async function updateSessionStats() {
     }
 }
 
-// ==================== SIDEBAR QUICK ACTIONS ====================
-// Load Example Data from sidebar
-document.getElementById('loadExampleDataSidebar')?.addEventListener('click', async () => {
-    // Switch to Data Management tab
-    document.querySelector('[data-tab="data-management"]').click();
+// ==================== CSV PARSING UTILITY ====================
+function parseCSV(csvText) {
+    // Handle different line endings (Windows, Unix, Mac)
+    const lines = csvText.trim().split(/\r?\n/);
 
-    // Show loading state
-    const btn = document.getElementById('loadExampleDataSidebar');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = 'Loading...';
-    btn.disabled = true;
+    if (lines.length === 0) {
+        return [];
+    }
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/transfer-plan/load-example-data`, {
-            method: 'POST'
+    const headers = lines[0].split(',').map(h => h.trim());
+    const data = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue; // Skip empty lines
+
+        const values = line.split(',').map(v => v.trim());
+        const row = {};
+
+        headers.forEach((header, index) => {
+            const value = values[index];
+            // Try to parse as number if possible
+            if (value && value !== '' && !isNaN(value)) {
+                row[header] = parseFloat(value);
+            } else {
+                row[header] = value || null;
+            }
         });
 
-        if (response.ok) {
-            const result = await response.json();
+        data.push(row);
+    }
 
-            // Show success notification
-            alert(`Example data loaded successfully!\nProducts: ${result.products_added} | Plants: ${result.plants_added}`);
+    return data;
+}
 
-            // Reload the products and plants lists
-            await loadProducts();
-            await loadPlants();
-            await updateSessionStats();
-        } else {
-            const error = await response.json();
-            alert(`Error: ${error.detail}`);
+// ==================== CSV UPLOAD HANDLERS ====================
+// Trigger file input when button is clicked
+document.getElementById('uploadProductsCSVBtn')?.addEventListener('click', () => {
+    document.getElementById('productsCSVUpload')?.click();
+});
+
+document.getElementById('uploadPlantsCSVBtn')?.addEventListener('click', () => {
+    document.getElementById('plantsCSVUpload')?.click();
+});
+
+// Products CSV Upload
+document.getElementById('productsCSVUpload')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    console.log('Processing products CSV file:', file.name);
+
+    try {
+        const text = await file.text();
+        console.log('CSV content loaded, parsing...');
+        const products = parseCSV(text);
+        console.log('Parsed products:', products);
+
+        if (products.length === 0) {
+            alert('CSV file is empty or invalid');
+            e.target.value = '';
+            return;
         }
+
+        // Validate required fields
+        const requiredFields = ['product_id', 'current_plant_id', 'monthly_demand', 'current_unit_cost'];
+        const firstProduct = products[0];
+        const missingFields = requiredFields.filter(field => !(field in firstProduct));
+
+        if (missingFields.length > 0) {
+            alert(`Missing required fields: ${missingFields.join(', ')}\n\nRequired fields: ${requiredFields.join(', ')}`);
+            e.target.value = '';
+            return;
+        }
+
+        // Upload products one by one
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+
+        for (const product of products) {
+            try {
+                const payload = {
+                    product_id: product.product_id,
+                    current_plant_id: product.current_plant_id,
+                    monthly_demand: product.monthly_demand,
+                    current_unit_cost: product.current_unit_cost,
+                    unit_volume_or_weight: product.unit_volume_or_weight,
+                    cycle_time_sec: product.cycle_time_sec,
+                    yield_rate: product.yield_rate
+                };
+
+                console.log('Uploading product:', payload);
+
+                const response = await fetch(`${API_BASE_URL}/products`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    successCount++;
+                    console.log(`✓ Product ${product.product_id} uploaded successfully`);
+                } else {
+                    errorCount++;
+                    const errorData = await response.json();
+                    console.error(`✗ Failed to upload ${product.product_id}:`, errorData);
+                    errors.push(`${product.product_id}: ${errorData.detail || 'Unknown error'}`);
+                }
+            } catch (error) {
+                errorCount++;
+                console.error(`✗ Error uploading ${product.product_id}:`, error);
+                errors.push(`${product.product_id}: ${error.message}`);
+            }
+        }
+
+        let message = `Products imported:\n✓ Success: ${successCount}\n✗ Failed: ${errorCount}`;
+        if (errors.length > 0 && errors.length <= 5) {
+            message += '\n\nErrors:\n' + errors.join('\n');
+        }
+
+        alert(message);
+        await loadProducts();
+        await updateSessionStats();
+        e.target.value = '';
     } catch (error) {
-        alert(`Error: ${error.message}`);
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        console.error('Error reading CSV file:', error);
+        alert(`Error reading CSV file: ${error.message}`);
+        e.target.value = '';
+    }
+});
+
+// Plants CSV Upload
+document.getElementById('plantsCSVUpload')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    console.log('Processing plants CSV file:', file.name);
+
+    try {
+        const text = await file.text();
+        console.log('CSV content loaded, parsing...');
+        const plants = parseCSV(text);
+        console.log('Parsed plants:', plants);
+
+        if (plants.length === 0) {
+            alert('CSV file is empty or invalid');
+            e.target.value = '';
+            return;
+        }
+
+        // Validate required fields
+        const requiredFields = ['plant_id', 'available_capacity', 'unit_production_cost', 'transfer_fixed_cost'];
+        const firstPlant = plants[0];
+        const missingFields = requiredFields.filter(field => !(field in firstPlant));
+
+        if (missingFields.length > 0) {
+            alert(`Missing required fields: ${missingFields.join(', ')}\n\nRequired fields: ${requiredFields.join(', ')}`);
+            e.target.value = '';
+            return;
+        }
+
+        // Upload plants one by one
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+
+        for (const plant of plants) {
+            try {
+                const payload = {
+                    plant_id: plant.plant_id,
+                    available_capacity: plant.available_capacity,
+                    unit_production_cost: plant.unit_production_cost,
+                    transfer_fixed_cost: plant.transfer_fixed_cost,
+                    effective_oee: plant.effective_oee || 1.0,
+                    lead_time_to_start: plant.lead_time_to_start || 0,
+                    risk_score: plant.risk_score,
+                    max_utilization_target: plant.max_utilization_target || 90
+                };
+
+                console.log('Uploading plant:', payload);
+
+                const response = await fetch(`${API_BASE_URL}/plants`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    successCount++;
+                    console.log(`✓ Plant ${plant.plant_id} uploaded successfully`);
+                } else {
+                    errorCount++;
+                    const errorData = await response.json();
+                    console.error(`✗ Failed to upload ${plant.plant_id}:`, errorData);
+                    errors.push(`${plant.plant_id}: ${errorData.detail || 'Unknown error'}`);
+                }
+            } catch (error) {
+                errorCount++;
+                console.error(`✗ Error uploading ${plant.plant_id}:`, error);
+                errors.push(`${plant.plant_id}: ${error.message}`);
+            }
+        }
+
+        let message = `Plants imported:\n✓ Success: ${successCount}\n✗ Failed: ${errorCount}`;
+        if (errors.length > 0 && errors.length <= 5) {
+            message += '\n\nErrors:\n' + errors.join('\n');
+        }
+
+        alert(message);
+        await loadPlants();
+        await updateSessionStats();
+        e.target.value = '';
+    } catch (error) {
+        console.error('Error reading CSV file:', error);
+        alert(`Error reading CSV file: ${error.message}`);
+        e.target.value = '';
     }
 });
 
@@ -555,9 +776,14 @@ document.getElementById('generatePlanForm').addEventListener('submit', async (e)
 
             statusDiv.innerHTML = `<p class="success">Transfer plan generated successfully! (${result.optimization_time_seconds}s)</p>`;
 
-            // Switch to results tab
-            document.querySelector('[data-tab="results"]').click();
+            // Enable Next button and automatically go to results
+            document.getElementById('nextStep2').disabled = false;
             displayResults(result);
+
+            // Auto-navigate to results after a short delay
+            setTimeout(() => {
+                goToStep(3);
+            }, 1500);
         } else {
             const error = await response.json();
             statusDiv.innerHTML = `<p class="error">Error: ${error.detail}</p>`;

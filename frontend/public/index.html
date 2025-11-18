@@ -12,9 +12,10 @@
         <header>
             <div class="header-content">
                 <div class="denso-logo">
-                    <h1>DENSO</h1>
+                    <img src="../assets/Denso.png" alt="DENSO" class="logo-image">
                     <div class="logo-subtitle">Transfer Plan Recommendation System</div>
                 </div>
+                <div class="powered-by">Powered by AI Planet</div>
             </div>
         </header>
 
@@ -48,9 +49,6 @@
                     </div>
                     <div class="quick-actions">
                         <h4>Quick Actions</h4>
-                        <button id="loadExampleDataSidebar" class="sidebar-btn">
-                            Load Example Data
-                        </button>
                         <button id="clearDataBtn" class="sidebar-btn btn-danger">
                             Clear All Data
                         </button>
@@ -60,17 +58,23 @@
 
             <!-- Main Content Area -->
             <div class="content-wrapper">
-                <nav class="tabs">
-                    <button class="tab-btn active" data-tab="data-management">
-                        Data Management
-                    </button>
-                    <button class="tab-btn" data-tab="transfer-plan">
-                        Generate Plan
-                    </button>
-                    <button class="tab-btn" data-tab="results">
-                        Results
-                    </button>
-                </nav>
+                <!-- Step Progress Indicator -->
+                <div class="stepper">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Data Management</div>
+                    </div>
+                    <div class="step-divider"></div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Generate Plan</div>
+                    </div>
+                    <div class="step-divider"></div>
+                    <div class="step" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Results</div>
+                    </div>
+                </div>
 
                 <main>
                     <!-- Data Management Tab (Combined Products + Plants) -->
@@ -91,7 +95,11 @@
                             <div class="card">
                                 <div class="card-header">
                                     <h3>Products List</h3>
-                                    <button id="loadProducts" class="btn-secondary">Refresh</button>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button id="loadProducts" class="btn-secondary">Refresh</button>
+                                        <button id="uploadProductsCSVBtn" class="btn-primary">Upload CSV</button>
+                                        <input type="file" id="productsCSVUpload" accept=".csv" style="display: none;">
+                                    </div>
                                 </div>
                                 <div id="productsList" class="data-table"></div>
                             </div>
@@ -139,7 +147,11 @@
                             <div class="card">
                                 <div class="card-header">
                                     <h3>Plants List</h3>
-                                    <button id="loadPlants" class="btn-secondary">Refresh</button>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button id="loadPlants" class="btn-secondary">Refresh</button>
+                                        <button id="uploadPlantsCSVBtn" class="btn-primary">Upload CSV</button>
+                                        <input type="file" id="plantsCSVUpload" accept=".csv" style="display: none;">
+                                    </div>
                                 </div>
                                 <div id="plantsList" class="data-table"></div>
                             </div>
@@ -184,6 +196,12 @@
                                     </div>
                                 </form>
                             </div>
+                        </div>
+
+                        <!-- Step Navigation -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn-secondary" id="prevStep1" style="visibility: hidden;">Previous</button>
+                            <button type="button" class="btn-primary" id="nextStep1">Next: Generate Plan</button>
                         </div>
                     </section>
 
@@ -231,6 +249,12 @@
                         </div>
 
                         <div id="planGenerationStatus" class="status-message"></div>
+
+                        <!-- Step Navigation -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn-secondary" id="prevStep2">Previous: Data Management</button>
+                            <button type="button" class="btn-primary" id="nextStep2" disabled>Next: View Results</button>
+                        </div>
                     </section>
 
                     <!-- Results Tab -->
@@ -243,8 +267,14 @@
                         <div id="resultsContainer">
                             <div class="empty-state">
                                 <p>No transfer plan generated yet</p>
-                                <p class="empty-state-hint">Go to "Generate Plan" to create an optimized transfer plan</p>
+                                <p class="empty-state-hint">Go back to generate a transfer plan</p>
                             </div>
+                        </div>
+
+                        <!-- Step Navigation -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn-secondary" id="prevStep3">Previous: Generate Plan</button>
+                            <button type="button" class="btn-primary" id="startOver">Start Over</button>
                         </div>
                     </section>
                 </main>

@@ -1,0 +1,5 @@
+plant_id,available_capacity,unit_production_cost,transfer_fixed_cost,effective_oee,lead_time_to_start,risk_score,max_utilization_target
+PLANT-JP-01,50000,22.00,100000,0.92,0,0.15,85
+PLANT-JP-02,45000,23.50,95000,0.88,1,0.18,85
+PLANT-US-01,38000,28.00,150000,0.85,2,0.25,90
+PLANT-CN-01,65000,15.50,120000,0.78,3,0.35,90
