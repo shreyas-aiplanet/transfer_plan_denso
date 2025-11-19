@@ -11,6 +11,9 @@
         <!-- Header -->
         <header>
             <div class="header-content">
+                <button id="backToSessionsBtn" class="back-btn" style="display: none;">
+                    ← Back to Plans
+                </button>
                 <div class="denso-logo">
                     <img src="../assets/Denso.png" alt="DENSO" class="logo-image">
                     <div class="logo-subtitle">Transfer Plan Recommendation System</div>
@@ -19,43 +22,126 @@
             </div>
         </header>
 
-        <!-- Main Layout: Sidebar + Content -->
-        <div class="main-layout">
-            <!-- Left Sidebar for Sessions -->
-            <aside class="sidebar">
-                <div class="sidebar-header">
-                    <h3>Sessions</h3>
-                    <button class="btn-icon" id="newSessionBtn" title="New Session">+</button>
+        <!-- Sessions Page (Landing Page) -->
+        <div id="sessionsPage" class="sessions-page">
+            <div class="sessions-page-header">
+                <h1>Your Plans</h1>
+                <p class="sessions-description">Manage your transfer plans. Create a new plan to get started.</p>
+            </div>
+
+            <div class="sessions-container">
+                <!-- Empty State (shown when no plans) -->
+                <div id="sessionsEmptyState" class="sessions-empty-state" style="display: none;">
+                    <div class="empty-state-icon">
+                        <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            <path d="M9 12h6m-6 4h6"/>
+                        </svg>
+                    </div>
+                    <h2>No Plans Yet</h2>
+                    <p>Get started by creating your first transfer plan.</p>
+                    <p class="empty-state-hint">Upload your products and plants data to begin optimization.</p>
+                    <button class="btn-primary btn-large" id="createSessionBtnEmpty" style="margin-top: 24px;">
+                        Create New Plan
+                    </button>
                 </div>
-                <div class="sessions-list" id="sessionsList">
-                    <div class="session-item active" data-session="default">
-                        <div class="session-info">
-                            <div class="session-name">Default Session</div>
-                            <div class="session-date">Active</div>
+
+                <div class="sessions-grid" id="sessionsGrid">
+                    <!-- Create New Plan Card -->
+                    <div class="session-card session-card-new" id="createSessionBtn">
+                        <div class="session-card-icon">+</div>
+                        <h3>Create New Plan</h3>
+                        <p>Start a new transfer plan analysis</p>
+                    </div>
+
+                    <!-- Existing plans will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan Creation Modal -->
+        <div id="sessionModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Create New Plan</h2>
+                    <button class="modal-close" id="closeModalBtn">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Plan Name -->
+                    <div class="form-group">
+                        <label for="sessionName">Plan Name *</label>
+                        <input type="text" id="sessionName" placeholder="e.g., Q1 2025 Transfer Plan" required>
+                    </div>
+
+                    <!-- CSV Upload Section -->
+                    <div class="csv-upload-section">
+                        <h3>Upload Data Files</h3>
+                        <p class="upload-hint">Drag & drop CSV files or click to browse</p>
+
+                        <!-- Products CSV -->
+                        <div class="upload-card" id="productsDropZone">
+                            <div class="upload-card-header">
+                                <h4>
+                                    <span class="upload-icon">📦</span>
+                                    Products Data
+                                </h4>
+                                <label class="upload-btn" for="modalProductsCSV">
+                                    Browse
+                                    <input type="file" id="modalProductsCSV" accept=".csv" style="display: none;">
+                                </label>
+                            </div>
+                            <div class="drop-zone" id="productsDropArea">
+                                <svg class="drop-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                </svg>
+                                <p class="drop-text">Drop products CSV here</p>
+                                <p class="drop-subtext">or click Browse button</p>
+                            </div>
+                            <div class="file-status" id="productsFileStatus" style="display: none;">
+                                <span class="status-icon">✓</span>
+                                <span class="status-text"></span>
+                            </div>
+                            <div class="csv-preview" id="productsPreview"></div>
+                        </div>
+
+                        <!-- Plants CSV -->
+                        <div class="upload-card" id="plantsDropZone">
+                            <div class="upload-card-header">
+                                <h4>
+                                    <span class="upload-icon">🏭</span>
+                                    Plants Data
+                                </h4>
+                                <label class="upload-btn" for="modalPlantsCSV">
+                                    Browse
+                                    <input type="file" id="modalPlantsCSV" accept=".csv" style="display: none;">
+                                </label>
+                            </div>
+                            <div class="drop-zone" id="plantsDropArea">
+                                <svg class="drop-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                </svg>
+                                <p class="drop-text">Drop plants CSV here</p>
+                                <p class="drop-subtext">or click Browse button</p>
+                            </div>
+                            <div class="file-status" id="plantsFileStatus" style="display: none;">
+                                <span class="status-icon">✓</span>
+                                <span class="status-text"></span>
+                            </div>
+                            <div class="csv-preview" id="plantsPreview"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="sidebar-footer">
-                    <div class="session-stats" id="sessionStats">
-                        <div class="stat-item">
-                            <span class="stat-label">Products:</span>
-                            <span class="stat-value" id="productCount">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Plants:</span>
-                            <span class="stat-value" id="plantCount">0</span>
-                        </div>
-                    </div>
-                    <div class="quick-actions">
-                        <h4>Quick Actions</h4>
-                        <button id="clearDataBtn" class="sidebar-btn btn-danger">
-                            Clear All Data
-                        </button>
-                    </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="cancelSessionBtn">Cancel</button>
+                    <button class="btn-primary" id="createSessionSubmitBtn" disabled>Create Plan</button>
                 </div>
-            </aside>
+            </div>
+        </div>
 
+        <!-- Main Layout: Content Only (No Sidebar) -->
+        <div class="main-layout" id="mainApp" style="display: none;">
             <!-- Main Content Area -->
             <div class="content-wrapper">
                 <!-- Step Progress Indicator -->
@@ -278,6 +364,21 @@
                         </div>
                     </section>
                 </main>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3 id="loadingTitle">Creating Plan...</h3>
+                <p id="loadingMessage">Uploading data files, please wait...</p>
+                <div class="loading-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">0%</p>
+                </div>
             </div>
         </div>
 

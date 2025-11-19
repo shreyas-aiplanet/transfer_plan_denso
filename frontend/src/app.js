@@ -4,6 +4,808 @@ const API_BASE_URL = 'http://localhost:8000/api/v1';
 // Global variable to store last transfer plan result
 let lastTransferPlanResult = null;
 
+// ==================== SESSION STORAGE & MANAGEMENT ====================
+let sessions = JSON.parse(localStorage.getItem('denso_sessions') || '[]');
+let currentSession = null;
+
+// Modal state
+let modalProductsFile = null;
+let modalPlantsFile = null;
+let modalProductsData = [];
+let modalPlantsData = [];
+
+// ==================== PAGE ROUTING ====================
+function showSessionsPage() {
+    document.getElementById('sessionsPage').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('backToSessionsBtn').style.display = 'none';
+    renderSessionCards();
+}
+
+function showMainApp(sessionData) {
+    document.getElementById('sessionsPage').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    document.getElementById('backToSessionsBtn').style.display = 'block';
+    currentSession = sessionData;
+}
+
+// Back to plans button
+document.getElementById('backToSessionsBtn')?.addEventListener('click', async () => {
+    try {
+        const productsResponse = await fetch(`${API_BASE_URL}/products`);
+        const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+
+        // Only check for unsaved data if backend is available
+        if (productsResponse.ok && plantsResponse.ok) {
+            const products = await productsResponse.json();
+            const plants = await plantsResponse.json();
+
+            if (products.length > 0 || plants.length > 0) {
+                const confirmLeave = confirm(
+                    'You have unsaved data in the current plan. Going back will not save this data.\n\n' +
+                    'Are you sure you want to return to plans?'
+                );
+                if (!confirmLeave) return;
+            }
+        }
+    } catch (error) {
+        console.warn('Could not check for unsaved data (backend may not be running):', error.message);
+        // Continue to plans page anyway
+    }
+
+    showSessionsPage();
+});
+
+// ==================== SESSION CARDS RENDERING ====================
+function renderSessionCards() {
+    const sessionsGrid = document.getElementById('sessionsGrid');
+    const createSessionCard = document.getElementById('createSessionBtn');
+
+    // Clear existing session cards (except the create new card)
+    const existingCards = sessionsGrid.querySelectorAll('.session-card:not(.session-card-new)');
+    existingCards.forEach(card => card.remove());
+
+    // Show empty state if no sessions
+    const emptyState = document.getElementById('sessionsEmptyState');
+    if (sessions.length === 0) {
+        if (emptyState) emptyState.style.display = 'block';
+        sessionsGrid.style.display = 'none';
+        return;
+    } else {
+        if (emptyState) emptyState.style.display = 'none';
+        sessionsGrid.style.display = 'grid';
+    }
+
+    // Sort sessions by creation date (newest first)
+    const sortedSessions = [...sessions].sort((a, b) =>
+        new Date(b.created_at) - new Date(a.created_at)
+    );
+
+    // Render existing sessions
+    sortedSessions.forEach(session => {
+        const sessionCard = document.createElement('div');
+        sessionCard.className = 'session-card';
+
+        const createdDate = new Date(session.created_at);
+        const now = new Date();
+        const diffTime = Math.abs(now - createdDate);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        let timeAgo = '';
+        if (diffDays === 0) {
+            timeAgo = 'Today';
+        } else if (diffDays === 1) {
+            timeAgo = 'Yesterday';
+        } else if (diffDays < 7) {
+            timeAgo = `${diffDays} days ago`;
+        } else {
+            timeAgo = createdDate.toLocaleDateString();
+        }
+
+        sessionCard.innerHTML = `
+            <button class="session-delete-btn" data-session-id="${session.id}" title="Delete session">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+            </button>
+            <div class="session-card-date">${timeAgo}</div>
+            <div class="session-card-icon-badge">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+            </div>
+            <h3>${session.name}</h3>
+            <p class="session-timestamp">${createdDate.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })}</p>
+            <div class="session-card-metadata">
+                <div class="session-metadata-item">
+                    <span class="metadata-icon">📦</span>
+                    <div class="metadata-info">
+                        <span class="metadata-value">${session.products_count || 0}</span>
+                        <span class="metadata-label">Products</span>
+                    </div>
+                </div>
+                <div class="session-metadata-item">
+                    <span class="metadata-icon">🏭</span>
+                    <div class="metadata-info">
+                        <span class="metadata-value">${session.plants_count || 0}</span>
+                        <span class="metadata-label">Plants</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add click handler for opening session (but not for delete button)
+        sessionCard.addEventListener('click', (e) => {
+            // Don't open if clicking delete button
+            if (e.target.closest('.session-delete-btn')) {
+                return;
+            }
+            openSession(session);
+        });
+
+        // Add delete button handler
+        const deleteBtn = sessionCard.querySelector('.session-delete-btn');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent card click
+            deleteSession(session.id);
+        });
+
+        sessionsGrid.appendChild(sessionCard);
+    });
+}
+
+// Delete plan function
+function deleteSession(sessionId) {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const confirmDelete = confirm(
+        `Are you sure you want to delete the plan "${session.name}"?\n\n` +
+        `This action cannot be undone.`
+    );
+
+    if (confirmDelete) {
+        // Remove from array
+        sessions = sessions.filter(s => s.id !== sessionId);
+
+        // Update localStorage
+        localStorage.setItem('denso_sessions', JSON.stringify(sessions));
+
+        // Re-render cards
+        renderSessionCards();
+    }
+}
+
+async function openSession(session) {
+    try {
+        // Show loading
+        showLoading('Opening Plan', 'Loading plan data...');
+
+        // Clear current data first
+        await clearAllData();
+
+        // Upload session's products to backend
+        if (session.products && session.products.length > 0) {
+            updateProgress(10, 'Restoring products...');
+            for (let i = 0; i < session.products.length; i++) {
+                const product = session.products[i];
+                try {
+                    const payload = {
+                        product_id: product.product_id,
+                        current_plant_id: product.current_plant_id,
+                        monthly_demand: product.monthly_demand,
+                        current_unit_cost: product.current_unit_cost,
+                        unit_volume_or_weight: product.unit_volume_or_weight,
+                        cycle_time_sec: product.cycle_time_sec,
+                        yield_rate: product.yield_rate
+                    };
+
+                    await fetch(`${API_BASE_URL}/products`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const progress = 10 + ((i + 1) / session.products.length) * 40;
+                    updateProgress(progress, `Restoring products: ${i + 1}/${session.products.length}`);
+                } catch (error) {
+                    console.warn('Error restoring product:', error);
+                }
+            }
+        }
+
+        // Upload session's plants to backend
+        if (session.plants && session.plants.length > 0) {
+            updateProgress(50, 'Restoring plants...');
+            for (let i = 0; i < session.plants.length; i++) {
+                const plant = session.plants[i];
+                try {
+                    const payload = {
+                        plant_id: plant.plant_id,
+                        available_capacity: plant.available_capacity,
+                        unit_production_cost: plant.unit_production_cost,
+                        transfer_fixed_cost: plant.transfer_fixed_cost,
+                        effective_oee: plant.effective_oee || 1.0,
+                        lead_time_to_start: plant.lead_time_to_start || 0,
+                        risk_score: plant.risk_score,
+                        max_utilization_target: plant.max_utilization_target || 90
+                    };
+
+                    await fetch(`${API_BASE_URL}/plants`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const progress = 50 + ((i + 1) / session.plants.length) * 40;
+                    updateProgress(progress, `Restoring plants: ${i + 1}/${session.plants.length}`);
+                } catch (error) {
+                    console.warn('Error restoring plant:', error);
+                }
+            }
+        }
+
+        updateProgress(95, 'Finalizing...');
+
+        // Show main app
+        showMainApp(session);
+
+        // Make sure we're on step 1 (data management)
+        goToStep(1);
+
+        updateProgress(100, 'Complete!');
+
+        // Hide loading and load data
+        setTimeout(async () => {
+            hideLoading();
+
+            // Small delay to ensure DOM is ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Load products and plants to display in UI
+            console.log('Loading plan data...');
+            await loadProducts();
+            await loadPlants();
+            await updateSessionStats();
+            console.log('Plan data loaded');
+        }, 500);
+    } catch (error) {
+        console.error('Error opening plan:', error);
+        hideLoading();
+        alert(`Error opening plan: ${error.message}`);
+        showSessionsPage();
+    }
+}
+
+// ==================== MODAL FUNCTIONALITY ====================
+const modal = document.getElementById('sessionModal');
+const createSessionBtn = document.getElementById('createSessionBtn');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const cancelSessionBtn = document.getElementById('cancelSessionBtn');
+const createSessionSubmitBtn = document.getElementById('createSessionSubmitBtn');
+const sessionNameInput = document.getElementById('sessionName');
+
+// Open modal
+createSessionBtn?.addEventListener('click', () => {
+    modal.classList.add('active');
+    resetModal();
+});
+
+// Empty state create button
+document.getElementById('createSessionBtnEmpty')?.addEventListener('click', () => {
+    modal.classList.add('active');
+    resetModal();
+});
+
+// Close modal
+function closeModal() {
+    modal.classList.remove('active');
+    resetModal();
+}
+
+closeModalBtn?.addEventListener('click', closeModal);
+cancelSessionBtn?.addEventListener('click', closeModal);
+
+// Close modal when clicking outside
+modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        closeModal();
+    }
+});
+
+// Reset modal
+function resetModal() {
+    sessionNameInput.value = '';
+    modalProductsFile = null;
+    modalPlantsFile = null;
+    modalProductsData = [];
+    modalPlantsData = [];
+
+    // Reset products drop zone
+    document.getElementById('productsDropArea').style.display = 'block';
+    document.getElementById('productsFileStatus').style.display = 'none';
+    document.getElementById('productsPreview').innerHTML = '';
+    document.getElementById('productsPreview').classList.remove('visible');
+
+    // Reset plants drop zone
+    document.getElementById('plantsDropArea').style.display = 'block';
+    document.getElementById('plantsFileStatus').style.display = 'none';
+    document.getElementById('plantsPreview').innerHTML = '';
+    document.getElementById('plantsPreview').classList.remove('visible');
+
+    updateCreateButtonState();
+}
+
+// Update create button state
+function updateCreateButtonState() {
+    const hasName = sessionNameInput.value.trim() !== '';
+    const hasProducts = modalProductsFile !== null;
+    const hasPlants = modalPlantsFile !== null;
+
+    createSessionSubmitBtn.disabled = !(hasName && hasProducts && hasPlants);
+}
+
+sessionNameInput?.addEventListener('input', updateCreateButtonState);
+
+// ==================== CSV UPLOAD & PREVIEW IN MODAL ====================
+
+// Helper function to handle file processing
+async function handleFileUpload(file, dataType) {
+    if (!file) {
+        console.log('No file provided');
+        return;
+    }
+
+    console.log(`Processing ${dataType} file:`, file.name, 'Size:', file.size);
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please upload a CSV file');
+        return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert('File size exceeds 10MB limit');
+        return;
+    }
+
+    try {
+        const text = await file.text();
+        console.log(`Read ${text.length} characters from ${dataType} file`);
+
+        const parsedData = parseCSV(text);
+        console.log(`Parsed ${parsedData.length} rows from ${dataType} CSV`);
+
+        if (parsedData.length === 0) {
+            alert('CSV file is empty or invalid');
+            return;
+        }
+
+        if (dataType === 'products') {
+            modalProductsFile = file;
+            modalProductsData = parsedData;
+            console.log('✓ Saved products data to modalProductsData:', modalProductsData.length, 'rows');
+
+            // Hide drop zone, show status
+            document.getElementById('productsDropArea').style.display = 'none';
+            const statusEl = document.getElementById('productsFileStatus');
+            statusEl.style.display = 'flex';
+            statusEl.querySelector('.status-text').textContent = `${file.name} (${parsedData.length} rows)`;
+
+            // Show preview
+            displayCSVPreview(parsedData, 'productsPreview');
+        } else if (dataType === 'plants') {
+            modalPlantsFile = file;
+            modalPlantsData = parsedData;
+            console.log('✓ Saved plants data to modalPlantsData:', modalPlantsData.length, 'rows');
+
+            // Hide drop zone, show status
+            document.getElementById('plantsDropArea').style.display = 'none';
+            const statusEl = document.getElementById('plantsFileStatus');
+            statusEl.style.display = 'flex';
+            statusEl.querySelector('.status-text').textContent = `${file.name} (${parsedData.length} rows)`;
+
+            // Show preview
+            displayCSVPreview(parsedData, 'plantsPreview');
+        }
+
+        updateCreateButtonState();
+    } catch (error) {
+        console.error(`Error reading ${dataType} CSV:`, error);
+        alert(`Error reading ${dataType} CSV: ${error.message}`);
+    }
+}
+
+// File input change handlers
+document.getElementById('modalProductsCSV')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    await handleFileUpload(file, 'products');
+    e.target.value = ''; // Reset input
+});
+
+document.getElementById('modalPlantsCSV')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    await handleFileUpload(file, 'plants');
+    e.target.value = ''; // Reset input
+});
+
+// Drag and drop functionality for products
+const productsDropZone = document.getElementById('productsDropZone');
+const productsDropArea = document.getElementById('productsDropArea');
+
+productsDropArea?.addEventListener('click', () => {
+    document.getElementById('modalProductsCSV').click();
+});
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    productsDropZone?.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    productsDropZone?.addEventListener(eventName, () => {
+        productsDropZone.classList.add('drag-over');
+        productsDropArea.classList.add('drag-active');
+    });
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    productsDropZone?.addEventListener(eventName, () => {
+        productsDropZone.classList.remove('drag-over');
+        productsDropArea.classList.remove('drag-active');
+    });
+});
+
+productsDropZone?.addEventListener('drop', async (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        await handleFileUpload(files[0], 'products');
+    }
+});
+
+// Drag and drop functionality for plants
+const plantsDropZone = document.getElementById('plantsDropZone');
+const plantsDropArea = document.getElementById('plantsDropArea');
+
+plantsDropArea?.addEventListener('click', () => {
+    document.getElementById('modalPlantsCSV').click();
+});
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    plantsDropZone?.addEventListener(eventName, preventDefaults, false);
+});
+
+['dragenter', 'dragover'].forEach(eventName => {
+    plantsDropZone?.addEventListener(eventName, () => {
+        plantsDropZone.classList.add('drag-over');
+        plantsDropArea.classList.add('drag-active');
+    });
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    plantsDropZone?.addEventListener(eventName, () => {
+        plantsDropZone.classList.remove('drag-over');
+        plantsDropArea.classList.remove('drag-active');
+    });
+});
+
+plantsDropZone?.addEventListener('drop', async (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        await handleFileUpload(files[0], 'plants');
+    }
+});
+
+function displayCSVPreview(data, previewId) {
+    const previewDiv = document.getElementById(previewId);
+
+    if (data.length === 0) {
+        previewDiv.innerHTML = '<p class="preview-empty">No data to preview</p>';
+        return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const previewRows = data.slice(0, 5); // Show first 5 rows
+
+    let html = `
+        <div class="preview-header">
+            <div class="preview-info">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                </svg>
+                <span>Preview: Showing ${previewRows.length} of ${data.length} rows</span>
+            </div>
+        </div>
+        <div class="preview-table-wrapper">
+            <table class="preview-table">
+                <thead>
+                    <tr>`;
+
+    headers.forEach(header => {
+        html += `<th>${header}</th>`;
+    });
+
+    html += `</tr>
+                </thead>
+                <tbody>`;
+
+    previewRows.forEach(row => {
+        html += '<tr>';
+        headers.forEach(header => {
+            const value = row[header];
+            const displayValue = value !== null && value !== undefined && value !== '' ? value : '-';
+            html += `<td>${displayValue}</td>`;
+        });
+        html += '</tr>';
+    });
+
+    html += `</tbody>
+            </table>
+        </div>`;
+
+    previewDiv.innerHTML = html;
+    previewDiv.classList.add('visible');
+}
+
+// ==================== CREATE SESSION ====================
+
+// Loading overlay functions
+function showLoading(title, message) {
+    const overlay = document.getElementById('loadingOverlay');
+    document.getElementById('loadingTitle').textContent = title;
+    document.getElementById('loadingMessage').textContent = message;
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressText').textContent = '0%';
+    overlay.classList.add('active');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+function updateProgress(percent, message) {
+    document.getElementById('progressFill').style.width = `${percent}%`;
+    document.getElementById('progressText').textContent = `${Math.round(percent)}%`;
+    if (message) {
+        document.getElementById('loadingMessage').textContent = message;
+    }
+}
+
+createSessionSubmitBtn?.addEventListener('click', async () => {
+    const sessionName = sessionNameInput.value.trim();
+
+    console.log('=== CREATE PLAN CLICKED ===');
+    console.log('Plan name:', sessionName);
+    console.log('modalProductsFile:', modalProductsFile ? modalProductsFile.name : 'NULL');
+    console.log('modalPlantsFile:', modalPlantsFile ? modalPlantsFile.name : 'NULL');
+    console.log('modalProductsData length:', modalProductsData.length);
+    console.log('modalPlantsData length:', modalPlantsData.length);
+
+    if (!sessionName || !modalProductsFile || !modalPlantsFile) {
+        alert('Please provide plan name and upload both CSV files');
+        return;
+    }
+
+    if (modalProductsData.length === 0 && modalPlantsData.length === 0) {
+        alert('CSV files appear to be empty. Please check your files and try again.');
+        return;
+    }
+
+    // IMPORTANT: Save data to local variables BEFORE closing modal
+    // because closeModal() calls resetModal() which clears these arrays
+    const productsToUpload = [...modalProductsData];
+    const plantsToUpload = [...modalPlantsData];
+    console.log('✓ Saved data to local variables:', productsToUpload.length, 'products,', plantsToUpload.length, 'plants');
+
+    // Show loading overlay
+    showLoading('Creating Plan', 'Preparing data upload...');
+    closeModal();
+
+    try {
+        // Clear any existing data first
+        updateProgress(5, 'Clearing existing data...');
+        await clearAllData();
+
+        // Upload products
+        updateProgress(10, 'Uploading products...');
+        let productsSuccess = 0;
+        let productsErrors = 0;
+        const totalProducts = productsToUpload.length;
+
+        console.log(`Uploading ${totalProducts} products to backend...`);
+        console.log('API URL:', API_BASE_URL);
+
+        for (let i = 0; i < totalProducts; i++) {
+            const product = productsToUpload[i];
+            try {
+                const payload = {
+                    product_id: product.product_id,
+                    current_plant_id: product.current_plant_id,
+                    monthly_demand: product.monthly_demand,
+                    current_unit_cost: product.current_unit_cost,
+                    unit_volume_or_weight: product.unit_volume_or_weight,
+                    cycle_time_sec: product.cycle_time_sec,
+                    yield_rate: product.yield_rate
+                };
+
+                const response = await fetch(`${API_BASE_URL}/products`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    productsSuccess++;
+                    const responseData = await response.json();
+                    console.log(`✓ Product ${product.product_id} uploaded, ID: ${responseData.id}`);
+
+                    // Test: Check if data persists immediately after first upload
+                    if (i === 0) {
+                        const testFetch = await fetch(`${API_BASE_URL}/products`);
+                        if (testFetch.ok) {
+                            const testData = await testFetch.json();
+                            console.log(`🧪 TEST: Immediately after first upload, backend has ${testData.length} products`);
+                            if (testData.length === 0) {
+                                console.error('❌ CRITICAL: Backend not persisting data!');
+                            }
+                        }
+                    }
+                } else {
+                    productsErrors++;
+                    const errorData = await response.text();
+                    console.error(`✗ Product ${product.product_id} failed (${response.status}):`, errorData);
+                }
+            } catch (error) {
+                productsErrors++;
+                console.error(`✗ Product ${product.product_id} error:`, error);
+            }
+
+            // Update progress (10% to 50%)
+            const progress = 10 + ((i + 1) / totalProducts) * 40;
+            updateProgress(progress, `Uploading products: ${i + 1}/${totalProducts}`);
+        }
+
+        console.log(`Products upload complete: ${productsSuccess} success, ${productsErrors} failed`);
+
+        // Upload plants
+        updateProgress(50, 'Uploading plants...');
+        let plantsSuccess = 0;
+        let plantsErrors = 0;
+        const totalPlants = plantsToUpload.length;
+
+        console.log(`Uploading ${totalPlants} plants to backend...`);
+
+        for (let i = 0; i < totalPlants; i++) {
+            const plant = plantsToUpload[i];
+            try {
+                const payload = {
+                    plant_id: plant.plant_id,
+                    available_capacity: plant.available_capacity,
+                    unit_production_cost: plant.unit_production_cost,
+                    transfer_fixed_cost: plant.transfer_fixed_cost,
+                    effective_oee: plant.effective_oee || 1.0,
+                    lead_time_to_start: plant.lead_time_to_start || 0,
+                    risk_score: plant.risk_score,
+                    max_utilization_target: plant.max_utilization_target || 90
+                };
+
+                const response = await fetch(`${API_BASE_URL}/plants`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    plantsSuccess++;
+                    const responseData = await response.json();
+                    console.log(`✓ Plant ${plant.plant_id} uploaded, ID: ${responseData.id}`);
+                } else {
+                    plantsErrors++;
+                    const errorData = await response.text();
+                    console.error(`✗ Plant ${plant.plant_id} failed (${response.status}):`, errorData);
+                }
+            } catch (error) {
+                plantsErrors++;
+                console.error(`✗ Plant ${plant.plant_id} error:`, error);
+            }
+
+            // Update progress (50% to 90%)
+            const progress = 50 + ((i + 1) / totalPlants) * 40;
+            updateProgress(progress, `Uploading plants: ${i + 1}/${totalPlants}`);
+        }
+
+        console.log(`Plants upload complete: ${plantsSuccess} success, ${plantsErrors} failed`);
+
+        // Verify data was uploaded by fetching it back
+        updateProgress(90, 'Verifying upload...');
+        try {
+            const verifyProductsResp = await fetch(`${API_BASE_URL}/products`);
+            const verifyPlantsResp = await fetch(`${API_BASE_URL}/plants`);
+
+            if (verifyProductsResp.ok && verifyPlantsResp.ok) {
+                const verifyProducts = await verifyProductsResp.json();
+                const verifyPlants = await verifyPlantsResp.json();
+                console.log(`✓ Verification: ${verifyProducts.length} products and ${verifyPlants.length} plants in backend`);
+
+                if (verifyProducts.length === 0 && verifyPlants.length === 0) {
+                    console.error('❌ WARNING: No data found in backend after upload!');
+                }
+            }
+        } catch (error) {
+            console.error('Verification failed:', error);
+        }
+
+        // Create session object with actual data
+        updateProgress(92, 'Finalizing session...');
+        const newSession = {
+            id: Date.now().toString(),
+            name: sessionName,
+            created_at: new Date().toISOString(),
+            products_count: productsSuccess,
+            plants_count: plantsSuccess,
+            products: productsToUpload,  // Store actual products data
+            plants: plantsToUpload       // Store actual plants data
+        };
+
+        // Save to localStorage
+        sessions.push(newSession);
+        localStorage.setItem('denso_sessions', JSON.stringify(sessions));
+
+        updateProgress(95, 'Loading session data...');
+
+        // Navigate to main app
+        showMainApp(newSession);
+
+        // Make sure we're on step 1 (data management)
+        goToStep(1);
+
+        updateProgress(100, 'Complete!');
+
+        // Hide loading and load data
+        setTimeout(async () => {
+            hideLoading();
+
+            // Small delay to ensure DOM is ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Load data after UI is visible
+            console.log('Loading products and plants...');
+            await loadProducts();
+            await loadPlants();
+            await updateSessionStats();
+            console.log('Data loading complete');
+
+            // Show summary if there were any errors
+            if (productsErrors > 0 || plantsErrors > 0) {
+                alert(
+                    `Plan "${sessionName}" created!\n\n` +
+                    `Products: ${productsSuccess} uploaded, ${productsErrors} failed\n` +
+                    `Plants: ${plantsSuccess} uploaded, ${plantsErrors} failed`
+                );
+            }
+        }, 500);
+
+    } catch (error) {
+        hideLoading();
+        alert(`Error creating plan: ${error.message}`);
+    }
+});
+
 // ==================== STEPPER NAVIGATION ====================
 let currentStep = 1;
 
@@ -76,29 +878,108 @@ document.querySelectorAll('.sub-tab-btn').forEach(btn => {
 
 // ==================== SESSION MANAGEMENT ====================
 
+// Function to update current session data in localStorage
+async function updateCurrentSessionData() {
+    if (!currentSession) return;
+
+    try {
+        // Fetch current data from backend
+        const productsResponse = await fetch(`${API_BASE_URL}/products`);
+        const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+
+        if (productsResponse.ok && plantsResponse.ok) {
+            const products = await productsResponse.json();
+            const plants = await plantsResponse.json();
+
+            // Find and update the session in the sessions array
+            const sessionIndex = sessions.findIndex(s => s.id === currentSession.id);
+            if (sessionIndex !== -1) {
+                sessions[sessionIndex].products = products.map(p => ({
+                    product_id: p.product_id,
+                    current_plant_id: p.current_plant_id,
+                    monthly_demand: p.monthly_demand,
+                    current_unit_cost: p.current_unit_cost,
+                    unit_volume_or_weight: p.unit_volume_or_weight,
+                    cycle_time_sec: p.cycle_time_sec,
+                    yield_rate: p.yield_rate
+                }));
+                sessions[sessionIndex].plants = plants.map(p => ({
+                    plant_id: p.plant_id,
+                    available_capacity: p.available_capacity,
+                    unit_production_cost: p.unit_production_cost,
+                    transfer_fixed_cost: p.transfer_fixed_cost,
+                    effective_oee: p.effective_oee,
+                    lead_time_to_start: p.lead_time_to_start,
+                    risk_score: p.risk_score,
+                    max_utilization_target: p.max_utilization_target
+                }));
+                sessions[sessionIndex].products_count = products.length;
+                sessions[sessionIndex].plants_count = plants.length;
+
+                // Update currentSession reference
+                currentSession = sessions[sessionIndex];
+
+                // Save to localStorage
+                localStorage.setItem('denso_sessions', JSON.stringify(sessions));
+            }
+        }
+    } catch (error) {
+        console.warn('Error updating session data:', error);
+    }
+}
+
 // Function to clear all data from backend
 async function clearAllData() {
     try {
-        // Get all products and delete them
-        const productsResponse = await fetch(`${API_BASE_URL}/products`);
-        const products = await productsResponse.json();
-        for (const product of products) {
-            await fetch(`${API_BASE_URL}/products/${product.id}`, { method: 'DELETE' });
+        // Try to get all products and delete them
+        try {
+            const productsResponse = await fetch(`${API_BASE_URL}/products`);
+            if (productsResponse.ok) {
+                const products = await productsResponse.json();
+                for (const product of products) {
+                    try {
+                        await fetch(`${API_BASE_URL}/products/${product.id}`, { method: 'DELETE' });
+                    } catch (err) {
+                        console.warn('Failed to delete product:', product.id, err);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Could not fetch products (backend may not be running):', err.message);
         }
 
-        // Get all plants and delete them
-        const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
-        const plants = await plantsResponse.json();
-        for (const plant of plants) {
-            await fetch(`${API_BASE_URL}/plants/${plant.id}`, { method: 'DELETE' });
+        // Try to get all plants and delete them
+        try {
+            const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+            if (plantsResponse.ok) {
+                const plants = await plantsResponse.json();
+                for (const plant of plants) {
+                    try {
+                        await fetch(`${API_BASE_URL}/plants/${plant.id}`, { method: 'DELETE' });
+                    } catch (err) {
+                        console.warn('Failed to delete plant:', plant.id, err);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Could not fetch plants (backend may not be running):', err.message);
         }
 
         // Clear last transfer plan result
         lastTransferPlanResult = null;
 
-        // Reload UI
-        await loadProducts();
-        await loadPlants();
+        // Try to reload UI (don't fail if backend is down)
+        try {
+            await loadProducts();
+        } catch (err) {
+            console.warn('Could not load products:', err.message);
+        }
+
+        try {
+            await loadPlants();
+        } catch (err) {
+            console.warn('Could not load plants:', err.message);
+        }
 
         // Clear results display
         const resultsContainer = document.getElementById('resultsContainer');
@@ -113,8 +994,8 @@ async function clearAllData() {
 
         return true;
     } catch (error) {
-        console.error('Error clearing data:', error);
-        alert(`Error clearing data: ${error.message}`);
+        console.error('Unexpected error in clearAllData:', error);
+        // Don't show alert for expected errors like backend being down
         return false;
     }
 }
@@ -239,8 +1120,14 @@ document.querySelectorAll('.session-item').forEach(session => {
 async function updateSessionStats() {
     try {
         const productsResponse = await fetch(`${API_BASE_URL}/products`);
-        const products = await productsResponse.json();
         const plantsResponse = await fetch(`${API_BASE_URL}/plants`);
+
+        if (!productsResponse.ok || !plantsResponse.ok) {
+            console.warn('Backend not available for stats update');
+            return;
+        }
+
+        const products = await productsResponse.json();
         const plants = await plantsResponse.json();
 
         const productCountEl = document.getElementById('productCount');
@@ -249,7 +1136,7 @@ async function updateSessionStats() {
         if (productCountEl) productCountEl.textContent = products.length;
         if (plantCountEl) plantCountEl.textContent = plants.length;
     } catch (error) {
-        console.error('Error updating session stats:', error);
+        console.warn('Error updating session stats (backend may not be running):', error.message);
     }
 }
 
@@ -377,6 +1264,7 @@ document.getElementById('productsCSVUpload')?.addEventListener('change', async (
         alert(message);
         await loadProducts();
         await updateSessionStats();
+        await updateCurrentSessionData();
         e.target.value = '';
     } catch (error) {
         console.error('Error reading CSV file:', error);
@@ -465,6 +1353,7 @@ document.getElementById('plantsCSVUpload')?.addEventListener('change', async (e)
         alert(message);
         await loadPlants();
         await updateSessionStats();
+        await updateCurrentSessionData();
         e.target.value = '';
     } catch (error) {
         console.error('Error reading CSV file:', error);
@@ -519,11 +1408,24 @@ document.getElementById('loadProducts').addEventListener('click', async () => {
 });
 
 async function loadProducts() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/products`);
-        const products = await response.json();
+    const productsList = document.getElementById('productsList');
 
-        const productsList = document.getElementById('productsList');
+    if (!productsList) {
+        console.error('productsList element not found!');
+        return;
+    }
+
+    try {
+        console.log('Fetching products from backend...');
+        const response = await fetch(`${API_BASE_URL}/products`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const products = await response.json();
+        console.log('Products fetched:', products.length);
+
         if (products.length === 0) {
             productsList.innerHTML = '<p class="empty-message">No products found. Add a product to get started.</p>';
         } else {
@@ -560,8 +1462,12 @@ async function loadProducts() {
         // Update session stats
         await updateSessionStats();
     } catch (error) {
-        document.getElementById('productsList').innerHTML = `
-            <p class="error">Error loading products: ${error.message}</p>
+        console.warn('Error loading products:', error);
+        productsList.innerHTML = `
+            <div class="alert alert-warning">
+                <p><strong>Unable to connect to backend server</strong></p>
+                <p>Please ensure the backend server is running at <code>${API_BASE_URL}</code></p>
+            </div>
         `;
     }
 }
@@ -593,6 +1499,7 @@ document.getElementById('addProductForm').addEventListener('submit', async (e) =
             alert('Product added successfully!');
             document.getElementById('addProductForm').reset();
             await loadProducts();
+            await updateCurrentSessionData();
         } else {
             const error = await response.json();
             alert(`Error: ${JSON.stringify(error.detail)}`);
@@ -616,6 +1523,7 @@ async function deleteProduct(productId) {
         if (response.ok) {
             alert('Product deleted successfully!');
             await loadProducts();
+            await updateCurrentSessionData();
         } else {
             alert('Error deleting product');
         }
@@ -632,11 +1540,24 @@ document.getElementById('loadPlants').addEventListener('click', async () => {
 });
 
 async function loadPlants() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/plants`);
-        const plants = await response.json();
+    const plantsList = document.getElementById('plantsList');
 
-        const plantsList = document.getElementById('plantsList');
+    if (!plantsList) {
+        console.error('plantsList element not found!');
+        return;
+    }
+
+    try {
+        console.log('Fetching plants from backend...');
+        const response = await fetch(`${API_BASE_URL}/plants`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const plants = await response.json();
+        console.log('Plants fetched:', plants.length);
+
         if (plants.length === 0) {
             plantsList.innerHTML = '<p class="empty-message">No plants found. Add a plant to get started.</p>';
         } else {
@@ -675,8 +1596,12 @@ async function loadPlants() {
         // Update session stats
         await updateSessionStats();
     } catch (error) {
-        document.getElementById('plantsList').innerHTML = `
-            <p class="error">Error loading plants: ${error.message}</p>
+        console.warn('Error loading plants:', error);
+        plantsList.innerHTML = `
+            <div class="alert alert-warning">
+                <p><strong>Unable to connect to backend server</strong></p>
+                <p>Please ensure the backend server is running at <code>${API_BASE_URL}</code></p>
+            </div>
         `;
     }
 }
@@ -713,6 +1638,7 @@ document.getElementById('addPlantForm').addEventListener('submit', async (e) => 
             document.getElementById('leadTimeToStart').value = '0';
             document.getElementById('maxUtilization').value = '90';
             await loadPlants();
+            await updateCurrentSessionData();
         } else {
             const error = await response.json();
             alert(`Error: ${JSON.stringify(error.detail)}`);
@@ -736,6 +1662,7 @@ async function deletePlant(plantId) {
         if (response.ok) {
             alert('Plant deleted successfully!');
             await loadPlants();
+            await updateCurrentSessionData();
         } else {
             alert('Error deleting plant');
         }
@@ -914,7 +1841,6 @@ function displayResults(result) {
 
 // Load data on page load
 document.addEventListener('DOMContentLoaded', () => {
-    loadProducts();
-    loadPlants();
-    updateSessionStats();
+    // Show sessions page on startup
+    showSessionsPage();
 });
