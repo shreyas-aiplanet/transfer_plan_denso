@@ -16,15 +16,29 @@ let modalPlantsData = [];
 
 // ==================== PAGE ROUTING ====================
 function showSessionsPage() {
-    document.getElementById('sessionsPage').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
+    const sessionsPage = document.getElementById('sessionsPage');
+    const mainApp = document.getElementById('mainApp');
+
+    sessionsPage.style.display = 'flex';
+    mainApp.style.display = 'none';
     document.getElementById('backToSessionsBtn').style.display = 'none';
+
+    console.log('Showing sessions page - sidebar is always visible');
     renderSessionCards();
 }
 
 function showMainApp(sessionData) {
-    document.getElementById('sessionsPage').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'flex';
+    const mainApp = document.getElementById('mainApp');
+    const sessionsPage = document.getElementById('sessionsPage');
+
+    console.log('=== Showing main app ===');
+
+    sessionsPage.style.display = 'none';
+    mainApp.style.display = 'flex';
+    mainApp.classList.remove('sessions-mode');
+
+    console.log('Main app display:', mainApp.style.display);
+
     document.getElementById('backToSessionsBtn').style.display = 'block';
     currentSession = sessionData;
 }
@@ -59,11 +73,9 @@ document.getElementById('backToSessionsBtn')?.addEventListener('click', async ()
 // ==================== SESSION CARDS RENDERING ====================
 function renderSessionCards() {
     const sessionsGrid = document.getElementById('sessionsGrid');
-    const createSessionCard = document.getElementById('createSessionBtn');
 
-    // Clear existing session cards (except the create new card)
-    const existingCards = sessionsGrid.querySelectorAll('.session-card:not(.session-card-new)');
-    existingCards.forEach(card => card.remove());
+    // Clear existing session cards
+    sessionsGrid.innerHTML = '';
 
     // Show empty state if no sessions
     const emptyState = document.getElementById('sessionsEmptyState');
@@ -87,30 +99,8 @@ function renderSessionCards() {
         sessionCard.className = 'session-card';
 
         const createdDate = new Date(session.created_at);
-        const now = new Date();
-        const diffTime = Math.abs(now - createdDate);
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        let timeAgo = '';
-        if (diffDays === 0) {
-            timeAgo = 'Today';
-        } else if (diffDays === 1) {
-            timeAgo = 'Yesterday';
-        } else if (diffDays < 7) {
-            timeAgo = `${diffDays} days ago`;
-        } else {
-            timeAgo = createdDate.toLocaleDateString();
-        }
 
         sessionCard.innerHTML = `
-            <button class="session-delete-btn" data-session-id="${session.id}" title="Delete session">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                    <line x1="10" y1="11" x2="10" y2="17"/>
-                    <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
-            </button>
-            <div class="session-card-date">${timeAgo}</div>
             <div class="session-card-icon-badge">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -126,20 +116,25 @@ function renderSessionCards() {
             })}</p>
             <div class="session-card-metadata">
                 <div class="session-metadata-item">
-                    <span class="metadata-icon">📦</span>
                     <div class="metadata-info">
                         <span class="metadata-value">${session.products_count || 0}</span>
                         <span class="metadata-label">Products</span>
                     </div>
                 </div>
                 <div class="session-metadata-item">
-                    <span class="metadata-icon">🏭</span>
                     <div class="metadata-info">
                         <span class="metadata-value">${session.plants_count || 0}</span>
                         <span class="metadata-label">Plants</span>
                     </div>
                 </div>
             </div>
+            <button class="session-delete-btn" data-session-id="${session.id}" title="Delete plan">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+            </button>
         `;
 
         // Add click handler for opening session (but not for delete button)
@@ -295,12 +290,6 @@ const sessionNameInput = document.getElementById('sessionName');
 
 // Open modal
 createSessionBtn?.addEventListener('click', () => {
-    modal.classList.add('active');
-    resetModal();
-});
-
-// Empty state create button
-document.getElementById('createSessionBtnEmpty')?.addEventListener('click', () => {
     modal.classList.add('active');
     resetModal();
 });
@@ -1446,7 +1435,7 @@ async function loadProducts() {
                         ${products.map(p => `
                             <tr>
                                 <td><strong>${p.product_id}</strong></td>
-                                <td><strong style="color: #10A958;">${p.current_plant_id || '<span style="color: #ff6b6b;">Not Assigned</span>'}</strong></td>
+                                <td><strong>${p.current_plant_id || '<span style="color: #707070;">Not Assigned</span>'}</strong></td>
                                 <td>${p.monthly_demand.toLocaleString()} pcs/month</td>
                                 <td>$${p.current_unit_cost.toFixed(2)}</td>
                                 <td>${p.cycle_time_sec ? p.cycle_time_sec + ' sec' : '-'}</td>
@@ -1744,20 +1733,20 @@ function displayResults(result) {
     const staysCount = result.assignments.filter(a => a.source_plant_id === a.target_plant_id).length;
 
     container.innerHTML = `
-        <div class="card" style="background: #f0f9f4; border-left: 4px solid #10A958; margin-bottom: 20px;">
+        <div class="card" style="border-left: 3px solid #1a1a1a; margin-bottom: 20px;">
             <h3>Transfer Plan Summary</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-                <div>
-                    <p style="color: #666; margin: 0;">Products to Transfer</p>
-                    <p style="font-size: 2em; font-weight: bold; color: #10A958; margin: 5px 0;">${transfersCount}</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; margin-top: 15px; background: #d0d0d0;">
+                <div style="background: #ffffff; padding: 20px;">
+                    <p style="color: #707070; margin: 0; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;">Products to Transfer</p>
+                    <p style="font-size: 2em; font-weight: bold; color: #1a1a1a; margin: 5px 0;">${transfersCount}</p>
                 </div>
-                <div>
-                    <p style="color: #666; margin: 0;">Products Staying</p>
-                    <p style="font-size: 2em; font-weight: bold; color: #666; margin: 5px 0;">${staysCount}</p>
+                <div style="background: #ffffff; padding: 20px;">
+                    <p style="color: #707070; margin: 0; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;">Products Staying</p>
+                    <p style="font-size: 2em; font-weight: bold; color: #1a1a1a; margin: 5px 0;">${staysCount}</p>
                 </div>
-                <div>
-                    <p style="color: #666; margin: 0;">Total Products</p>
-                    <p style="font-size: 2em; font-weight: bold; color: #333; margin: 5px 0;">${result.assignments.length}</p>
+                <div style="background: #ffffff; padding: 20px;">
+                    <p style="color: #707070; margin: 0; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;">Total Products</p>
+                    <p style="font-size: 2em; font-weight: bold; color: #1a1a1a; margin: 5px 0;">${result.assignments.length}</p>
                 </div>
             </div>
         </div>
@@ -1799,13 +1788,13 @@ function displayResults(result) {
                 <tbody>
                     ${result.assignments.map(a => {
                         const isTransfer = a.source_plant_id !== a.target_plant_id;
-                        const rowStyle = isTransfer ? 'background: #fff9f0;' : '';
-                        const transferBadge = isTransfer ? '<span style="background: #10A958; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-left: 5px;">TRANSFER</span>' : '<span style="background: #e9ecef; color: #666; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-left: 5px;">STAY</span>';
+                        const rowStyle = isTransfer ? 'background: #f5f5f5;' : '';
+                        const transferBadge = isTransfer ? '<span style="background: #1a1a1a; color: #ffffff; padding: 4px 10px; border-radius: 0; font-size: 0.75rem; margin-left: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500;">TRANSFER</span>' : '<span style="background: #f5f5f5; color: #4a4a4a; padding: 4px 10px; border-radius: 0; font-size: 0.75rem; margin-left: 8px; border: 1px solid #d0d0d0; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500;">STAY</span>';
 
                         return `
                         <tr style="${rowStyle}">
                             <td><strong>${a.product_id}</strong>${transferBadge}</td>
-                            <td><span style="color: #666;">${a.source_plant_id || 'New'}</span> → <strong style="color: ${isTransfer ? '#10A958' : '#666'};">${a.target_plant_id}</strong></td>
+                            <td><span style="color: #707070;">${a.source_plant_id || 'New'}</span> → <strong style="color: ${isTransfer ? '#1a1a1a' : '#4a4a4a'};">${a.target_plant_id}</strong></td>
                             <td>${a.assigned_volume.toLocaleString()}</td>
                             <td><span class="utilization-badge">${a.utilization.toFixed(1)}%</span></td>
                             <td>$${a.transfer_cost.toLocaleString()}</td>

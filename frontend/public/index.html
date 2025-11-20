@@ -11,53 +11,19 @@
         <!-- Header -->
         <header>
             <div class="header-content">
-                <button id="backToSessionsBtn" class="back-btn" style="display: none;">
-                    ← Back to Plans
-                </button>
-                <div class="denso-logo">
+                <div class="header-left">
                     <img src="../assets/Denso.png" alt="DENSO" class="logo-image">
+                    <div class="logo-divider"></div>
                     <div class="logo-subtitle">Transfer Plan Recommendation System</div>
                 </div>
-                <div class="powered-by">Powered by AI Planet</div>
+                <div class="header-right">
+                    <button id="backToSessionsBtn" class="back-btn" style="display: none;">
+                        Back to Plans
+                    </button>
+                    <div class="powered-by">Powered by AI Planet</div>
+                </div>
             </div>
         </header>
-
-        <!-- Sessions Page (Landing Page) -->
-        <div id="sessionsPage" class="sessions-page">
-            <div class="sessions-page-header">
-                <h1>Your Plans</h1>
-                <p class="sessions-description">Manage your transfer plans. Create a new plan to get started.</p>
-            </div>
-
-            <div class="sessions-container">
-                <!-- Empty State (shown when no plans) -->
-                <div id="sessionsEmptyState" class="sessions-empty-state" style="display: none;">
-                    <div class="empty-state-icon">
-                        <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            <path d="M9 12h6m-6 4h6"/>
-                        </svg>
-                    </div>
-                    <h2>No Plans Yet</h2>
-                    <p>Get started by creating your first transfer plan.</p>
-                    <p class="empty-state-hint">Upload your products and plants data to begin optimization.</p>
-                    <button class="btn-primary btn-large" id="createSessionBtnEmpty" style="margin-top: 24px;">
-                        Create New Plan
-                    </button>
-                </div>
-
-                <div class="sessions-grid" id="sessionsGrid">
-                    <!-- Create New Plan Card -->
-                    <div class="session-card session-card-new" id="createSessionBtn">
-                        <div class="session-card-icon">+</div>
-                        <h3>Create New Plan</h3>
-                        <p>Start a new transfer plan analysis</p>
-                    </div>
-
-                    <!-- Existing plans will be added here dynamically -->
-                </div>
-            </div>
-        </div>
 
         <!-- Plan Creation Modal -->
         <div id="sessionModal" class="modal">
@@ -83,7 +49,6 @@
                         <div class="upload-card" id="productsDropZone">
                             <div class="upload-card-header">
                                 <h4>
-                                    <span class="upload-icon">📦</span>
                                     Products Data
                                 </h4>
                                 <label class="upload-btn" for="modalProductsCSV">
@@ -109,7 +74,6 @@
                         <div class="upload-card" id="plantsDropZone">
                             <div class="upload-card-header">
                                 <h4>
-                                    <span class="upload-icon">🏭</span>
                                     Plants Data
                                 </h4>
                                 <label class="upload-btn" for="modalPlantsCSV">
@@ -140,9 +104,67 @@
             </div>
         </div>
 
-        <!-- Main Layout: Content Only (No Sidebar) -->
-        <div class="main-layout" id="mainApp" style="display: none;">
-            <!-- Main Content Area -->
+        <!-- Application Layout with Persistent Sidebar -->
+        <div class="app-layout">
+            <!-- Sidebar Navigation (Always Visible) -->
+            <aside class="app-sidebar">
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-nav-item active" data-page="dashboard">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="sidebar-nav-item" data-page="settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <!-- Main Content Container -->
+            <div class="main-content-container">
+                <!-- Sessions Page (Landing Page) -->
+                <div id="sessionsPage" class="sessions-page">
+                    <div class="sessions-toolbar">
+                        <div class="sessions-toolbar-left">
+                            <h1>Transfer Plans</h1>
+                            <p class="sessions-description">Manage and create transfer plans</p>
+                        </div>
+                        <div class="sessions-toolbar-right">
+                            <button class="btn-primary" id="createSessionBtn">Create New Plan</button>
+                        </div>
+                    </div>
+
+                    <div class="sessions-container">
+                        <!-- Empty State (shown when no plans) -->
+                        <div id="sessionsEmptyState" class="sessions-empty-state" style="display: none;">
+                            <div class="empty-state-icon">
+                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    <path d="M9 12h6m-6 4h6"/>
+                                </svg>
+                            </div>
+                            <h2>No Plans Yet</h2>
+                            <p>Get started by creating your first transfer plan.</p>
+                            <p class="empty-state-hint">Click "Create New Plan" button above to begin.</p>
+                        </div>
+
+                        <div class="sessions-grid" id="sessionsGrid">
+                            <!-- Existing plans will be added here dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plan Content Area Wrapper -->
+                <div class="main-layout sessions-mode" id="mainApp">
+                <!-- Main Content Area -->
             <div class="content-wrapper">
                 <!-- Step Progress Indicator -->
                 <div class="stepper">
@@ -364,6 +386,8 @@
                         </div>
                     </section>
                 </main>
+            </div>
+                </div>
             </div>
         </div>
 
