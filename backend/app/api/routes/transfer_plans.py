@@ -125,7 +125,7 @@ async def generate_transfer_plan(config: TransferPlanConfig):
                 plant_pairs = [(p_id, t_id) for p_id, t_id in feasible_pairs if t_id == plant.id]
                 if plant_pairs:
                     utilization = lpSum([x[p_id, t_id] for p_id, t_id in plant_pairs]) / effective_capacity * 100
-                    prob += max_util >= utilization
+                    prob += (max_util >= utilization, f"MaxUtil_{plant.id}_{plant.plant_id}")
         prob += max_util, "Minimize_Max_Utilization"
 
     # Constraint 1: Demand Satisfaction
@@ -136,7 +136,7 @@ async def generate_transfer_plan(config: TransferPlanConfig):
         if product_pairs:
             prob += (
                 lpSum([x[p_id, t_id] for p_id, t_id in product_pairs]) == product.monthly_demand,
-                f"Demand_{product.product_id}"
+                f"Demand_{product.id}_{product.product_id}"
             )
 
     # Constraint 2: Capacity Constraints
@@ -148,7 +148,7 @@ async def generate_transfer_plan(config: TransferPlanConfig):
         if plant_pairs:
             prob += (
                 lpSum([x[p_id, t_id] for p_id, t_id in plant_pairs]) <= effective_capacity,
-                f"Capacity_{plant.plant_id}"
+                f"Capacity_{plant.id}_{plant.plant_id}"
             )
 
     # Constraint 3: Binary assignment activation (only for MILP)
@@ -159,7 +159,7 @@ async def generate_transfer_plan(config: TransferPlanConfig):
             # x can only be non-zero if y is 1
             prob += (
                 x[product_id, plant_id] <= product.monthly_demand * y[product_id, plant_id],
-                f"Activation_{product.product_id}_{plant.plant_id}"
+                f"Activation_{product_id}_{plant_id}"
             )
 
     # Constraint 4: Budget constraint (optional)

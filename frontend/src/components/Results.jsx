@@ -123,8 +123,8 @@ function Results({ result, onPrev, onStartOver }) {
                 fill="#8884d8"
                 dataKey="value"
               >
-                <Cell fill="#1a1a1a" />
-                <Cell fill="#707070" />
+                <Cell fill="#4A90E2" />
+                <Cell fill="#7ED321" />
               </Pie>
               <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
             </PieChart>
@@ -142,88 +142,80 @@ function Results({ result, onPrev, onStartOver }) {
               ]}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis dataKey="category" />
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="count" fill="#1a1a1a" name="Number of Products" />
+              <Bar dataKey="count" fill="#F5A623" name="Number of Products" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Plant Utilization Chart */}
-        <div style={{ marginBottom: '40px' }}>
-          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Plant-wise Utilization</h4>
-          <ResponsiveContainer width="100%" height={300}>
+        {/* Plant Utilization Chart - Before and After */}
+        <div style={{ marginBottom: '20px' }}>
+          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Plant-wise Utilization (Before vs After Transfer Plan)</h4>
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart
               data={(() => {
-                const plantData = {};
+                const plantDataBefore = {};
+                const plantDataAfter = {};
+
+                // Calculate "Before" state (based on source plants)
                 result.assignments.forEach(a => {
-                  if (!plantData[a.target_plant_id]) {
-                    plantData[a.target_plant_id] = {
-                      plant: a.target_plant_id,
+                  if (a.source_plant_id) {
+                    if (!plantDataBefore[a.source_plant_id]) {
+                      plantDataBefore[a.source_plant_id] = {
+                        totalUtilization: 0,
+                        count: 0
+                      };
+                    }
+                    plantDataBefore[a.source_plant_id].totalUtilization += a.utilization;
+                    plantDataBefore[a.source_plant_id].count += 1;
+                  }
+                });
+
+                // Calculate "After" state (based on target plants)
+                result.assignments.forEach(a => {
+                  if (!plantDataAfter[a.target_plant_id]) {
+                    plantDataAfter[a.target_plant_id] = {
                       totalUtilization: 0,
                       count: 0
                     };
                   }
-                  plantData[a.target_plant_id].totalUtilization += a.utilization;
-                  plantData[a.target_plant_id].count += 1;
+                  plantDataAfter[a.target_plant_id].totalUtilization += a.utilization;
+                  plantDataAfter[a.target_plant_id].count += 1;
                 });
-                return Object.values(plantData).map(p => ({
-                  plant: p.plant,
-                  avgUtilization: (p.totalUtilization / p.count).toFixed(1)
-                }));
+
+                // Combine all plant IDs
+                const allPlants = new Set([
+                  ...Object.keys(plantDataBefore),
+                  ...Object.keys(plantDataAfter)
+                ]);
+
+                return Array.from(allPlants).sort().map(plantId => ({
+                  plant: plantId,
+                  before: plantDataBefore[plantId]
+                    ? parseFloat((plantDataBefore[plantId].totalUtilization / plantDataBefore[plantId].count).toFixed(1))
+                    : 0,
+                  after: plantDataAfter[plantId]
+                    ? parseFloat((plantDataAfter[plantId].totalUtilization / plantDataAfter[plantId].count).toFixed(1))
+                    : 0
+                })).filter(p => p.after > 0);
               })()}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis dataKey="plant" label={{ value: 'Plant ID', position: 'insideBottom', offset: -5 }} />
               <YAxis label={{ value: 'Avg Utilization (%)', angle: -90, position: 'insideLeft' }} />
               <Tooltip formatter={(value) => `${value}%`} />
               <Legend />
-              <Bar dataKey="avgUtilization" fill="#707070" name="Average Utilization (%)" />
+              <Bar dataKey="before" fill="#E94B3C" name="Before Transfer (%)" />
+              <Bar dataKey="after" fill="#50E3C2" name="After Transfer (%)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Cost by Product Type */}
-        <div style={{ marginBottom: '20px' }}>
-          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Cost Distribution by Transfer Type</h4>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={[
-                {
-                  type: 'Transfer Products',
-                  transferCost: result.assignments
-                    .filter(a => a.source_plant_id !== a.target_plant_id)
-                    .reduce((sum, a) => sum + a.transfer_cost, 0),
-                  monthlyCost: result.assignments
-                    .filter(a => a.source_plant_id !== a.target_plant_id)
-                    .reduce((sum, a) => sum + a.monthly_production_cost, 0)
-                },
-                {
-                  type: 'Products Staying',
-                  transferCost: result.assignments
-                    .filter(a => a.source_plant_id === a.target_plant_id)
-                    .reduce((sum, a) => sum + a.transfer_cost, 0),
-                  monthlyCost: result.assignments
-                    .filter(a => a.source_plant_id === a.target_plant_id)
-                    .reduce((sum, a) => sum + a.monthly_production_cost, 0)
-                }
-              ]}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="type" />
-              <YAxis />
-              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-              <Legend />
-              <Bar dataKey="transferCost" fill="#1a1a1a" name="Transfer Cost" />
-              <Bar dataKey="monthlyCost" fill="#707070" name="Monthly Production Cost" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
 
       <div className="card">
