@@ -1,3 +1,5 @@
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
 function Results({ result, onPrev, onStartOver }) {
   if (!result) {
     return (
@@ -101,6 +103,130 @@ function Results({ result, onPrev, onStartOver }) {
       </div>
 
       <div className="card">
+        <h3>Visualizations</h3>
+
+        {/* Cost Breakdown Pie Chart */}
+        <div style={{ marginBottom: '40px' }}>
+          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Cost Breakdown</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: 'Transfer Cost', value: result.total_transfer_cost },
+                  { name: 'Monthly Production Cost', value: result.total_monthly_cost }
+                ]}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                <Cell fill="#1a1a1a" />
+                <Cell fill="#707070" />
+              </Pie>
+              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Transfer vs Stay Distribution */}
+        <div style={{ marginBottom: '40px' }}>
+          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Transfer vs Stay Distribution</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={[
+                { category: 'Products to Transfer', count: transfersCount },
+                { category: 'Products Staying', count: staysCount }
+              ]}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="category" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#1a1a1a" name="Number of Products" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Plant Utilization Chart */}
+        <div style={{ marginBottom: '40px' }}>
+          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Plant-wise Utilization</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={(() => {
+                const plantData = {};
+                result.assignments.forEach(a => {
+                  if (!plantData[a.target_plant_id]) {
+                    plantData[a.target_plant_id] = {
+                      plant: a.target_plant_id,
+                      totalUtilization: 0,
+                      count: 0
+                    };
+                  }
+                  plantData[a.target_plant_id].totalUtilization += a.utilization;
+                  plantData[a.target_plant_id].count += 1;
+                });
+                return Object.values(plantData).map(p => ({
+                  plant: p.plant,
+                  avgUtilization: (p.totalUtilization / p.count).toFixed(1)
+                }));
+              })()}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="plant" label={{ value: 'Plant ID', position: 'insideBottom', offset: -5 }} />
+              <YAxis label={{ value: 'Avg Utilization (%)', angle: -90, position: 'insideLeft' }} />
+              <Tooltip formatter={(value) => `${value}%`} />
+              <Legend />
+              <Bar dataKey="avgUtilization" fill="#707070" name="Average Utilization (%)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Cost by Product Type */}
+        <div style={{ marginBottom: '20px' }}>
+          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Cost Distribution by Transfer Type</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={[
+                {
+                  type: 'Transfer Products',
+                  transferCost: result.assignments
+                    .filter(a => a.source_plant_id !== a.target_plant_id)
+                    .reduce((sum, a) => sum + a.transfer_cost, 0),
+                  monthlyCost: result.assignments
+                    .filter(a => a.source_plant_id !== a.target_plant_id)
+                    .reduce((sum, a) => sum + a.monthly_production_cost, 0)
+                },
+                {
+                  type: 'Products Staying',
+                  transferCost: result.assignments
+                    .filter(a => a.source_plant_id === a.target_plant_id)
+                    .reduce((sum, a) => sum + a.transfer_cost, 0),
+                  monthlyCost: result.assignments
+                    .filter(a => a.source_plant_id === a.target_plant_id)
+                    .reduce((sum, a) => sum + a.monthly_production_cost, 0)
+                }
+              ]}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="type" />
+              <YAxis />
+              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+              <Legend />
+              <Bar dataKey="transferCost" fill="#1a1a1a" name="Transfer Cost" />
+              <Bar dataKey="monthlyCost" fill="#707070" name="Monthly Production Cost" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="card">
         <h3>Transfer Assignments</h3>
         <table>
           <thead>
@@ -166,9 +292,59 @@ function Results({ result, onPrev, onStartOver }) {
         <button type="button" className="btn-secondary" onClick={onPrev}>
           Previous: Generate Plan
         </button>
-        <button type="button" className="btn-primary" onClick={onStartOver}>
-          Start Over
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              alert('Transfer plan accepted! This will proceed with implementation.');
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              border: '1px solid #28a745',
+              cursor: 'pointer',
+              backgroundColor: '#28a745',
+              color: '#ffffff',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              borderRadius: 'var(--border-radius)'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+          >
+            Accept Plan
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Are you sure you want to reject this transfer plan?')) {
+                alert('Transfer plan rejected. You can generate a new plan.');
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              border: '1px solid #dc3545',
+              cursor: 'pointer',
+              backgroundColor: '#dc3545',
+              color: '#ffffff',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              borderRadius: 'var(--border-radius)'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+          >
+            Reject Plan
+          </button>
+          <button type="button" className="btn-primary" onClick={onStartOver}>
+            Start Over
+          </button>
+        </div>
       </div>
     </section>
   );
