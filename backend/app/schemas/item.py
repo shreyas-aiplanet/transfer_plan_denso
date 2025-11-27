@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 
 
@@ -131,6 +131,14 @@ class TransferPlanConfig(BaseModel):
     allow_fractional_assignment: bool = Field(
         False,
         description="Allow splitting production across plants"
+    )
+    excluded_products: List[str] = Field(
+        default_factory=list,
+        description="Product IDs to exclude from transfer (keep at current plant)"
+    )
+    excluded_plants: List[str] = Field(
+        default_factory=list,
+        description="Plant IDs to exclude from optimization (no transfers to/from)"
     )
 
 

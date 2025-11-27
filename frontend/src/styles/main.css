@@ -7,7 +7,7 @@
     --medium-gray: #6b7280;
     --light-gray: #9ca3af;
     --border-gray: #d1d5db;
-    --bg-light: #f0fdf4;
+    --bg-light: #fafffe;
     --bg-white: #fafffe;
     --text-dark: #1f2937;
     --text-medium: #374151;
@@ -20,7 +20,7 @@
     --shadow-md: 0 2px 6px rgba(22, 163, 74, 0.12);
     --shadow-lg: 0 4px 12px rgba(22, 163, 74, 0.15);
     --sidebar-width: 220px;
-    --border-radius: 12px;
+    --border-radius: 8px;
 }
 
 * {

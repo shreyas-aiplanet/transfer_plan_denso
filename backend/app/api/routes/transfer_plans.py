@@ -46,6 +46,16 @@ async def generate_transfer_plan(config: TransferPlanConfig):
             detail=f"The following products must be assigned to a current plant before optimization: {', '.join(products_without_plants)}"
         )
 
+    # Get exclusion lists from config
+    excluded_product_ids = set(config.excluded_products or [])
+    excluded_plant_ids = set(config.excluded_plants or [])
+
+    # Filter out excluded plants from the optimization
+    available_plants = [t for t in plants if t.plant_id not in excluded_plant_ids]
+
+    # Create lookup for plant_id -> plant object
+    plant_by_plant_id = {t.plant_id: t for t in plants}
+
     # Create the optimization problem
     if config.objective_function == "minimize_cost":
         prob = LpProblem("Transfer_Plan_Cost_Minimization", LpMinimize)
@@ -58,11 +68,21 @@ async def generate_transfer_plan(config: TransferPlanConfig):
     # Only create variables for product-plant pairs where the product can fit
     feasible_pairs = []
     for p in products:
-        for t in plants:
-            effective_capacity = t.available_capacity * (t.effective_oee or 1.0)
-            # Only consider assignments where product demand fits in plant capacity
-            if p.monthly_demand <= effective_capacity:
-                feasible_pairs.append((p.id, t.id))
+        # Check if product is excluded from transfer
+        if p.product_id in excluded_product_ids:
+            # Excluded product: can only stay at current plant
+            current_plant = plant_by_plant_id.get(p.current_plant_id)
+            if current_plant and current_plant.plant_id not in excluded_plant_ids:
+                effective_capacity = current_plant.available_capacity * (current_plant.effective_oee or 1.0)
+                if p.monthly_demand <= effective_capacity:
+                    feasible_pairs.append((p.id, current_plant.id))
+        else:
+            # Normal product: can go to any available plant
+            for t in available_plants:
+                effective_capacity = t.available_capacity * (t.effective_oee or 1.0)
+                # Only consider assignments where product demand fits in plant capacity
+                if p.monthly_demand <= effective_capacity:
+                    feasible_pairs.append((p.id, t.id))
 
     # Calculate problem size reduction
     total_possible = len(products) * len(plants)
