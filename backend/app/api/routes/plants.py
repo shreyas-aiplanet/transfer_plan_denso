@@ -24,8 +24,18 @@ async def get_plant(plant_id: int):
 
 @router.post("/plants", response_model=Plant, status_code=201)
 async def create_plant(plant: PlantCreate):
-    """Create a new plant."""
+    """Create a new plant or update if plant_id already exists."""
     global plant_counter
+
+    # Check if plant with same plant_id already exists
+    for existing_id, existing_plant in plants_db.items():
+        if existing_plant.plant_id == plant.plant_id:
+            # Update existing plant instead of creating duplicate
+            updated_plant = Plant(id=existing_id, **plant.model_dump())
+            plants_db[existing_id] = updated_plant
+            return updated_plant
+
+    # Create new plant
     plant_counter += 1
     new_plant = Plant(id=plant_counter, **plant.model_dump())
     plants_db[plant_counter] = new_plant

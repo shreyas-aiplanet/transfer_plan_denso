@@ -103,6 +103,52 @@ function Results({ result, onPrev, onStartOver }) {
       </div>
 
       <div className="card">
+        <h3>Transfer Assignments</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Transfer (From - To)</th>
+              <th>Volume (pcs/month)</th>
+              <th>Utilization</th>
+              <th>Transfer Cost</th>
+              <th>Monthly Cost</th>
+              <th>Total Cost</th>
+              <th>Start Month</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.assignments.map((a, i) => {
+              const isTransfer = a.source_plant_id !== a.target_plant_id;
+              return (
+                <tr key={i} style={isTransfer ? { background: '#f0fdf4' } : {}}>
+                  <td>
+                    <strong>{a.product_id}</strong>
+                    {isTransfer ? (
+                      <span style={{ background: '#16a34a', color: '#ffffff', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>TRANSFER</span>
+                    ) : (
+                      <span style={{ background: '#f0fdf4', color: '#374151', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', marginLeft: '8px', border: '1px solid #d1d5db', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>STAY</span>
+                    )}
+                  </td>
+                  <td>
+                    <span style={{ color: '#6b7280' }}>{a.source_plant_id || 'New'}</span>
+                    {' -> '}
+                    <strong style={{ color: isTransfer ? '#16a34a' : '#374151' }}>{a.target_plant_id}</strong>
+                  </td>
+                  <td>{a.assigned_volume.toLocaleString()}</td>
+                  <td><span className="utilization-badge">{a.utilization.toFixed(1)}%</span></td>
+                  <td>${a.transfer_cost.toLocaleString()}</td>
+                  <td>${a.monthly_production_cost.toLocaleString()}</td>
+                  <td>${a.total_cost.toLocaleString()}</td>
+                  <td>{a.start_month || 0}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
         <h3>Visualizations</h3>
 
         {/* Cost Breakdown Pie Chart */}
@@ -216,52 +262,6 @@ function Results({ result, onPrev, onStartOver }) {
           </ResponsiveContainer>
         </div>
 
-      </div>
-
-      <div className="card">
-        <h3>Transfer Assignments</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Product ID</th>
-              <th>Transfer (From - To)</th>
-              <th>Volume (pcs/month)</th>
-              <th>Utilization</th>
-              <th>Transfer Cost</th>
-              <th>Monthly Cost</th>
-              <th>Total Cost</th>
-              <th>Start Month</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.assignments.map((a, i) => {
-              const isTransfer = a.source_plant_id !== a.target_plant_id;
-              return (
-                <tr key={i} style={isTransfer ? { background: '#f0fdf4' } : {}}>
-                  <td>
-                    <strong>{a.product_id}</strong>
-                    {isTransfer ? (
-                      <span style={{ background: '#16a34a', color: '#ffffff', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>TRANSFER</span>
-                    ) : (
-                      <span style={{ background: '#f0fdf4', color: '#374151', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', marginLeft: '8px', border: '1px solid #d1d5db', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>STAY</span>
-                    )}
-                  </td>
-                  <td>
-                    <span style={{ color: '#6b7280' }}>{a.source_plant_id || 'New'}</span>
-                    {' -> '}
-                    <strong style={{ color: isTransfer ? '#16a34a' : '#374151' }}>{a.target_plant_id}</strong>
-                  </td>
-                  <td>{a.assigned_volume.toLocaleString()}</td>
-                  <td><span className="utilization-badge">{a.utilization.toFixed(1)}%</span></td>
-                  <td>${a.transfer_cost.toLocaleString()}</td>
-                  <td>${a.monthly_production_cost.toLocaleString()}</td>
-                  <td>${a.total_cost.toLocaleString()}</td>
-                  <td>{a.start_month || 0}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
 
       {result.constraints_violated.length > 0 && (

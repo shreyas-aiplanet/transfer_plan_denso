@@ -58,35 +58,6 @@ function SessionCard({ session, onOpen, onDelete }) {
 
   return (
     <div className="session-card" onClick={handleClick}>
-      <div className="session-card-icon-badge">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-        </svg>
-      </div>
-      <h3>{session.name}</h3>
-      <p className="session-timestamp">
-        {createdDate.toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
-      </p>
-      <div className="session-card-metadata">
-        <div className="session-metadata-item">
-          <div className="metadata-info">
-            <span className="metadata-value">{session.products_count || 0}</span>
-            <span className="metadata-label">Products</span>
-          </div>
-        </div>
-        <div className="session-metadata-item">
-          <div className="metadata-info">
-            <span className="metadata-value">{session.plants_count || 0}</span>
-            <span className="metadata-label">Plants</span>
-          </div>
-        </div>
-      </div>
       <button
         className="session-delete-btn"
         title="Delete plan"
@@ -98,6 +69,49 @@ function SessionCard({ session, onOpen, onDelete }) {
           <line x1="14" y1="11" x2="14" y2="17"/>
         </svg>
       </button>
+      <div className="session-card-header">
+        <div className="session-card-icon-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          </svg>
+        </div>
+        <div className="session-card-info">
+          <h3>{session.name}</h3>
+          <p className="session-timestamp">
+            {createdDate.toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </p>
+        </div>
+      </div>
+      <div className="session-card-metadata">
+        <div className="session-metadata-item">
+          <div className="metadata-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
+          <div className="metadata-info">
+            <span className="metadata-value">{session.products_count || 0}</span>
+            <span className="metadata-label">Products</span>
+          </div>
+        </div>
+        <div className="session-metadata-item">
+          <div className="metadata-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 21h18M5 21V7l8-4 8 4v14M9 21v-6h6v6"/>
+            </svg>
+          </div>
+          <div className="metadata-info">
+            <span className="metadata-value">{session.plants_count || 0}</span>
+            <span className="metadata-label">Plants</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

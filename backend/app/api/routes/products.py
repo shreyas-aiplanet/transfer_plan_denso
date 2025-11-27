@@ -24,8 +24,18 @@ async def get_product(product_id: int):
 
 @router.post("/products", response_model=Product, status_code=201)
 async def create_product(product: ProductCreate):
-    """Create a new product."""
+    """Create a new product or update if product_id already exists."""
     global product_counter
+
+    # Check if product with same product_id already exists
+    for existing_id, existing_product in products_db.items():
+        if existing_product.product_id == product.product_id:
+            # Update existing product instead of creating duplicate
+            updated_product = Product(id=existing_id, **product.model_dump())
+            products_db[existing_id] = updated_product
+            return updated_product
+
+    # Create new product
     product_counter += 1
     new_product = Product(id=product_counter, **product.model_dump())
     products_db[product_counter] = new_product
