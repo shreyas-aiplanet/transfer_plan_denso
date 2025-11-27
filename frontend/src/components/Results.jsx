@@ -65,20 +65,20 @@ function Results({ result, onPrev, onStartOver }) {
         <p className="section-description">View the optimized transfer plan recommendations</p>
       </div>
 
-      <div className="card" style={{ borderLeft: '3px solid #1a1a1a', marginBottom: '20px' }}>
+      <div className="card" style={{ borderLeft: '3px solid #16a34a', marginBottom: '20px' }}>
         <h3>Transfer Plan Summary</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1px', marginTop: '15px', background: '#d0d0d0' }}>
-          <div style={{ background: '#ffffff', padding: '20px' }}>
-            <p style={{ color: '#707070', margin: 0, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Products to Transfer</p>
-            <p style={{ fontSize: '2em', fontWeight: 'bold', color: '#1a1a1a', margin: '5px 0' }}>{transfersCount}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1px', marginTop: '15px', background: '#d1d5db', borderRadius: '12px', overflow: 'hidden' }}>
+          <div style={{ background: '#fafffe', padding: '20px' }}>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Products to Transfer</p>
+            <p style={{ fontSize: '2em', fontWeight: 'bold', color: '#1f2937', margin: '5px 0' }}>{transfersCount}</p>
           </div>
-          <div style={{ background: '#ffffff', padding: '20px' }}>
-            <p style={{ color: '#707070', margin: 0, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Products Staying</p>
-            <p style={{ fontSize: '2em', fontWeight: 'bold', color: '#1a1a1a', margin: '5px 0' }}>{staysCount}</p>
+          <div style={{ background: '#fafffe', padding: '20px' }}>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Products Staying</p>
+            <p style={{ fontSize: '2em', fontWeight: 'bold', color: '#1f2937', margin: '5px 0' }}>{staysCount}</p>
           </div>
-          <div style={{ background: '#ffffff', padding: '20px' }}>
-            <p style={{ color: '#707070', margin: 0, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Products</p>
-            <p style={{ fontSize: '2em', fontWeight: 'bold', color: '#1a1a1a', margin: '5px 0' }}>{result.assignments.length}</p>
+          <div style={{ background: '#fafffe', padding: '20px' }}>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Products</p>
+            <p style={{ fontSize: '2em', fontWeight: 'bold', color: '#1f2937', margin: '5px 0' }}>{result.assignments.length}</p>
           </div>
         </div>
       </div>
@@ -107,7 +107,7 @@ function Results({ result, onPrev, onStartOver }) {
 
         {/* Cost Breakdown Pie Chart */}
         <div style={{ marginBottom: '40px' }}>
-          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Cost Breakdown</h4>
+          <h4 style={{ marginBottom: '20px', color: '#374151' }}>Cost Breakdown</h4>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -133,7 +133,7 @@ function Results({ result, onPrev, onStartOver }) {
 
         {/* Transfer vs Stay Distribution */}
         <div style={{ marginBottom: '40px' }}>
-          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Transfer vs Stay Distribution</h4>
+          <h4 style={{ marginBottom: '20px', color: '#374151' }}>Transfer vs Stay Distribution</h4>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
               data={[
@@ -154,7 +154,7 @@ function Results({ result, onPrev, onStartOver }) {
 
         {/* Plant Utilization Chart - Before and After */}
         <div style={{ marginBottom: '20px' }}>
-          <h4 style={{ marginBottom: '20px', color: '#4a4a4a' }}>Plant-wise Utilization (Before vs After Transfer Plan)</h4>
+          <h4 style={{ marginBottom: '20px', color: '#374151' }}>Plant-wise Utilization (Before vs After Transfer Plan)</h4>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart
               data={(() => {
@@ -237,19 +237,19 @@ function Results({ result, onPrev, onStartOver }) {
             {result.assignments.map((a, i) => {
               const isTransfer = a.source_plant_id !== a.target_plant_id;
               return (
-                <tr key={i} style={isTransfer ? { background: '#f5f5f5' } : {}}>
+                <tr key={i} style={isTransfer ? { background: '#f0fdf4' } : {}}>
                   <td>
                     <strong>{a.product_id}</strong>
                     {isTransfer ? (
-                      <span style={{ background: '#1a1a1a', color: '#ffffff', padding: '4px 10px', borderRadius: 0, fontSize: '0.75rem', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>TRANSFER</span>
+                      <span style={{ background: '#16a34a', color: '#ffffff', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>TRANSFER</span>
                     ) : (
-                      <span style={{ background: '#f5f5f5', color: '#4a4a4a', padding: '4px 10px', borderRadius: 0, fontSize: '0.75rem', marginLeft: '8px', border: '1px solid #d0d0d0', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>STAY</span>
+                      <span style={{ background: '#f0fdf4', color: '#374151', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', marginLeft: '8px', border: '1px solid #d1d5db', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>STAY</span>
                     )}
                   </td>
                   <td>
-                    <span style={{ color: '#707070' }}>{a.source_plant_id || 'New'}</span>
+                    <span style={{ color: '#6b7280' }}>{a.source_plant_id || 'New'}</span>
                     {' -> '}
-                    <strong style={{ color: isTransfer ? '#1a1a1a' : '#4a4a4a' }}>{a.target_plant_id}</strong>
+                    <strong style={{ color: isTransfer ? '#16a34a' : '#374151' }}>{a.target_plant_id}</strong>
                   </td>
                   <td>{a.assigned_volume.toLocaleString()}</td>
                   <td><span className="utilization-badge">{a.utilization.toFixed(1)}%</span></td>
@@ -294,17 +294,17 @@ function Results({ result, onPrev, onStartOver }) {
               padding: '10px 20px',
               fontSize: '0.875rem',
               fontWeight: '500',
-              border: '1px solid #28a745',
+              border: '1px solid #16a34a',
               cursor: 'pointer',
-              backgroundColor: '#28a745',
+              backgroundColor: '#16a34a',
               color: '#ffffff',
               transition: 'all 0.2s ease',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              borderRadius: 'var(--border-radius)'
+              borderRadius: '12px'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#15803d'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#16a34a'}
           >
             Accept Plan
           </button>
@@ -319,17 +319,17 @@ function Results({ result, onPrev, onStartOver }) {
               padding: '10px 20px',
               fontSize: '0.875rem',
               fontWeight: '500',
-              border: '1px solid #dc3545',
+              border: '1px solid #dc2626',
               cursor: 'pointer',
-              backgroundColor: '#dc3545',
+              backgroundColor: '#dc2626',
               color: '#ffffff',
               transition: 'all 0.2s ease',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              borderRadius: 'var(--border-radius)'
+              borderRadius: '12px'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#b91c1c'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc2626'}
           >
             Reject Plan
           </button>

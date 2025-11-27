@@ -255,7 +255,7 @@ function DataManagement({ onNext, onUpdateSession }) {
                     {products.map(p => (
                       <tr key={p.id}>
                         <td><strong>{p.product_id}</strong></td>
-                        <td><strong>{p.current_plant_id || <span style={{ color: '#707070' }}>Not Assigned</span>}</strong></td>
+                        <td><strong>{p.current_plant_id || <span style={{ color: '#6b7280' }}>Not Assigned</span>}</strong></td>
                         <td>{p.monthly_demand.toLocaleString()} pcs/month</td>
                         <td>${p.current_unit_cost.toFixed(2)}</td>
                         <td>{p.cycle_time_sec ? `${p.cycle_time_sec} sec` : '-'}</td>
