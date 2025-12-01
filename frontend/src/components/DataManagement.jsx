@@ -29,6 +29,32 @@ function DataManagement({ onNext, onUpdateSession }) {
     setLoading(false);
   };
 
+  const clearAllProducts = async () => {
+    if (!confirm('Are you sure you want to delete ALL products? This cannot be undone.')) return;
+    try {
+      const result = await api.clearAllProducts();
+      alert(`Cleared ${result.deleted} products successfully!`);
+      await loadData();
+      onUpdateSession();
+    } catch (error) {
+      console.error('Error clearing products:', error);
+      alert(`Error clearing products: ${error.message}`);
+    }
+  };
+
+  const clearAllPlants = async () => {
+    if (!confirm('Are you sure you want to delete ALL plants? This cannot be undone.')) return;
+    try {
+      const result = await api.clearAllPlants();
+      alert(`Cleared ${result.deleted} plants successfully!`);
+      await loadData();
+      onUpdateSession();
+    } catch (error) {
+      console.error('Error clearing plants:', error);
+      alert(`Error clearing plants: ${error.message}`);
+    }
+  };
+
   const handleProductsCSV = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -44,6 +70,15 @@ function DataManagement({ onNext, onUpdateSession }) {
         alert(`Missing required fields: ${missingFields.join(', ')}`);
         e.target.value = '';
         return;
+      }
+
+      // Ask user if they want to clear existing products first
+      const shouldClear = products.length > 0 && confirm(
+        `You have ${products.length} existing product(s). Do you want to clear them before importing?\n\nClick OK to clear existing data first, or Cancel to add to existing data.`
+      );
+
+      if (shouldClear) {
+        await api.clearAllProducts();
       }
 
       let successCount = 0;
@@ -88,6 +123,15 @@ function DataManagement({ onNext, onUpdateSession }) {
         alert(`Missing required fields: ${missingFields.join(', ')}`);
         e.target.value = '';
         return;
+      }
+
+      // Ask user if they want to clear existing plants first
+      const shouldClear = plants.length > 0 && confirm(
+        `You have ${plants.length} existing plant(s). Do you want to clear them before importing?\n\nClick OK to clear existing data first, or Cancel to add to existing data.`
+      );
+
+      if (shouldClear) {
+        await api.clearAllPlants();
       }
 
       let successCount = 0;
@@ -223,6 +267,11 @@ function DataManagement({ onNext, onUpdateSession }) {
               <h3>Products List</h3>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn-secondary" onClick={loadData}>Refresh</button>
+                {products.length > 0 && (
+                  <button className="btn-delete" onClick={clearAllProducts}>
+                    Clear All
+                  </button>
+                )}
                 <button className="btn-primary" onClick={() => productsFileRef.current?.click()}>
                   Upload CSV
                 </button>
@@ -319,6 +368,11 @@ function DataManagement({ onNext, onUpdateSession }) {
               <h3>Plants List</h3>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn-secondary" onClick={loadData}>Refresh</button>
+                {plants.length > 0 && (
+                  <button className="btn-delete" onClick={clearAllPlants}>
+                    Clear All
+                  </button>
+                )}
                 <button className="btn-primary" onClick={() => plantsFileRef.current?.click()}>
                   Upload CSV
                 </button>

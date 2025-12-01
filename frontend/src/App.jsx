@@ -36,17 +36,12 @@ function App() {
 
   const clearAllData = async () => {
     try {
-      const products = await api.getProducts();
-      for (const product of products) {
-        await api.deleteProduct(product.id);
-      }
-
-      const plants = await api.getPlants();
-      for (const plant of plants) {
-        await api.deletePlant(plant.id);
-      }
+      const result = await api.clearAllData();
+      console.log('Cleared data:', result);
+      return result;
     } catch (error) {
-      console.warn('Error clearing data:', error);
+      console.error('Error clearing data:', error);
+      throw error;
     }
   };
 

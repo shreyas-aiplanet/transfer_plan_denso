@@ -1,6 +1,76 @@
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function Results({ result, onPrev, onStartOver }) {
+  const exportToCSV = () => {
+    if (!result || !result.assignments || result.assignments.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'Product ID',
+      'Source Plant',
+      'Target Plant',
+      'Transfer Status',
+      'Volume (pcs/month)',
+      'Utilization (%)',
+      'Transfer Cost ($)',
+      'Monthly Cost ($)',
+      'Total Cost ($)',
+      'Start Month'
+    ];
+
+    // Generate CSV rows
+    const rows = result.assignments.map(a => {
+      const isTransfer = a.source_plant_id !== a.target_plant_id;
+      return [
+        a.product_id,
+        a.source_plant_id || 'New',
+        a.target_plant_id,
+        isTransfer ? 'TRANSFER' : 'STAY',
+        a.assigned_volume,
+        a.utilization.toFixed(1),
+        a.transfer_cost,
+        a.monthly_production_cost,
+        a.total_cost,
+        a.start_month || 0
+      ];
+    });
+
+    // Add summary rows
+    rows.push([]); // Empty row
+    rows.push(['--- SUMMARY ---']);
+    rows.push(['Total Transfer Cost', '', '', '', '', '', result.total_transfer_cost]);
+    rows.push(['Total Monthly Cost', '', '', '', '', '', '', result.total_monthly_cost]);
+    rows.push(['Total Cost', '', '', '', '', '', '', '', result.total_cost]);
+    rows.push(['Average Utilization (%)', '', '', '', '', result.average_utilization.toFixed(1)]);
+    rows.push(['Optimization Time (sec)', '', '', '', '', '', '', '', '', result.optimization_time_seconds]);
+
+    // Convert to CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => {
+        // Escape cells containing commas or quotes
+        const cellStr = String(cell ?? '');
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+          return `"${cellStr.replace(/"/g, '""')}"`;
+        }
+        return cellStr;
+      }).join(','))
+    ].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transfer_plan_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   if (!result) {
     return (
       <section className="tab-content active">
@@ -103,7 +173,34 @@ function Results({ result, onPrev, onStartOver }) {
       </div>
 
       <div className="card">
-        <h3>Transfer Assignments</h3>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h3 style={{ margin: 0 }}>Transfer Assignments</h3>
+          <button
+            type="button"
+            onClick={exportToCSV}
+            style={{
+              padding: '8px 16px',
+              fontSize: '0.8125rem',
+              fontWeight: '500',
+              border: '1px solid #374151',
+              cursor: 'pointer',
+              backgroundColor: '#374151',
+              color: '#ffffff',
+              transition: 'all 0.2s ease',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#1f2937'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#374151'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ pointerEvents: 'none' }}>
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            Export CSV
+          </button>
+        </div>
         <table>
           <thead>
             <tr>

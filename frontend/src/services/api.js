@@ -26,7 +26,8 @@ export const api = {
       method: 'DELETE'
     });
     if (!response.ok) throw new Error('Failed to delete product');
-    return response.json();
+    // 204 No Content response has no body
+    return { success: true };
   },
 
   // Plants
@@ -54,7 +55,35 @@ export const api = {
       method: 'DELETE'
     });
     if (!response.ok) throw new Error('Failed to delete plant');
-    return response.json();
+    // 204 No Content response has no body
+    return { success: true };
+  },
+
+  // Clear all data
+  async clearAllProducts() {
+    const products = await this.getProducts();
+    for (const product of products) {
+      await this.deleteProduct(product.id);
+    }
+    return { success: true, deleted: products.length };
+  },
+
+  async clearAllPlants() {
+    const plants = await this.getPlants();
+    for (const plant of plants) {
+      await this.deletePlant(plant.id);
+    }
+    return { success: true, deleted: plants.length };
+  },
+
+  async clearAllData() {
+    const productsResult = await this.clearAllProducts();
+    const plantsResult = await this.clearAllPlants();
+    return {
+      success: true,
+      productsDeleted: productsResult.deleted,
+      plantsDeleted: plantsResult.deleted
+    };
   },
 
   // Transfer Plan

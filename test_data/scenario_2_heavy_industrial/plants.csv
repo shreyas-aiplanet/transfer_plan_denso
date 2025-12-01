@@ -1,0 +1,5 @@
+plant_id,available_capacity,unit_production_cost,transfer_fixed_cost,effective_oee,lead_time_to_start,risk_score,max_utilization_target
+PLANT-DE-STUTTGART,95000,7.50,85000,0.88,1,0.08,92
+PLANT-CZ-MLADA,120000,5.20,55000,0.85,2,0.18,90
+PLANT-PL-WROCLAW,140000,4.80,45000,0.82,3,0.22,88
+PLANT-HU-GYOR,110000,5.00,50000,0.84,2,0.20,90
